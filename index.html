@@ -150,7 +150,7 @@
         <div id="modal-content" class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center transform"></div>
     </div>
 
-    <!-- ▼ 修正: Tailwind CSSのクラスでフッターを固定 -->
+    <!-- フッターナビゲーション -->
     <footer class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-t-sm">
         <nav class="max-w-2xl mx-auto flex justify-around">
             <button data-view="list" class="nav-button active flex-1 py-3 text-center"><i class="fas fa-list-ul fa-lg"></i><span class="block text-xs font-medium">メイン</span></button>
@@ -361,9 +361,9 @@
                 };
 
                 if (todoId) {
-                    const existingTodo = state.todos.find(t => t.id === todoId);
-                    if (existingTodo) {
-                        Object.assign(existingTodo, todoData);
+                    const index = state.todos.findIndex(t => t.id === todoId);
+                    if (index !== -1) {
+                        state.todos[index] = { ...state.todos[index], ...todoData };
                     }
                 } else {
                     todoData.id = Date.now().toString();
@@ -373,8 +373,6 @@
                 
                 state.currentFilter = 'all';
                 saveState();
-                // ▼ 修正: 保存後に状態を再読み込みして、確実に最新データを反映させる
-                loadState(); 
                 navigateTo('list');
             }
         }
