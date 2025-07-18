@@ -21,11 +21,15 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* * タスクアイテムのレイアウト
-         * 'gap' プロパティは要素間の余白を指定する、モダンなCSSの書き方です。
-         * もしエディタでエラー（unknown property）が表示されても、
-         * ほとんどの現代のブラウザで正しく動作しますのでご安心ください。
-        */
+        /* ▼ 修正: フッターを確実に固定するためのスタイル */
+        footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 40; /* モーダル(50)より下、バナー(20)より上 */
+        }
+
         .task-item {
             display: grid;
             grid-template-columns: auto 1fr auto;
@@ -156,7 +160,7 @@
     </div>
 
     <!-- フッターナビゲーション -->
-    <footer class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-t-sm z-10">
+    <footer class="bg-white border-t border-gray-200 shadow-t-sm">
         <nav class="max-w-2xl mx-auto flex justify-around">
             <button data-view="list" class="nav-button active flex-1 py-3 text-center"><i class="fas fa-list-ul fa-lg"></i><span class="block text-xs font-medium">メイン</span></button>
             <button data-view="matrix" class="nav-button flex-1 py-3 text-center text-gray-500"><i class="fas fa-th-large fa-lg"></i><span class="block text-xs font-medium">マトリクス</span></button>
@@ -375,7 +379,9 @@
                     todoData.completed = false;
                     state.todos.push(todoData);
                 }
-
+                
+                // ▼ 修正: フィルターを'all'にリセット
+                state.currentFilter = 'all';
                 saveState();
                 navigateTo('list');
             }
