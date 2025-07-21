@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HOLIDAY ToDo (AI搭載・改 v5)</title>
+    <title>HOLIDAY ToDo (最終修正版・v6)</title>
     <!-- 外部ライブラリの読み込み -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
@@ -64,6 +64,7 @@
             z-index: 20;
             padding: 10px;
             background-color: #f9fafb;
+            max-width: 100%;
         }
         .guardian-banner {
             animation: pulse-bg 2s infinite;
@@ -348,6 +349,8 @@
                 const formData = new FormData(e.target);
                 const todoId = formData.get('id');
 
+                const currentTodos = JSON.parse(localStorage.getItem('holiday-todos') || '[]');
+
                 const todoData = {
                     title: formData.get('title'),
                     content: formData.get('content'),
@@ -361,18 +364,22 @@
                 };
 
                 if (todoId) {
-                    const index = state.todos.findIndex(t => t.id === todoId);
+                    const index = currentTodos.findIndex(t => t.id === todoId);
                     if (index !== -1) {
-                        state.todos[index] = { ...state.todos[index], ...todoData };
+                        const originalTodo = currentTodos[index];
+                        currentTodos[index] = { ...originalTodo, ...todoData };
                     }
                 } else {
                     todoData.id = Date.now().toString();
                     todoData.completed = false;
-                    state.todos.push(todoData);
+                    currentTodos.push(todoData);
                 }
                 
+                localStorage.setItem('holiday-todos', JSON.stringify(currentTodos));
+                
+                loadState();
+                
                 state.currentFilter = 'all';
-                saveState();
                 navigateTo('list');
             }
         }
@@ -399,9 +406,21 @@
             setTimeout(updateBodyPadding, 0);
         }
 
-        // --- データ永続化 (変更なし) ---
-        function saveState() { localStorage.setItem('holiday-todos', JSON.stringify(state.todos)); localStorage.setItem('holiday-consecutive-overdue', state.consecutiveOverdue); };
-        function loadState() { try { const t = localStorage.getItem('holiday-todos'); state.todos = t ? JSON.parse(t) : []; state.consecutiveOverdue = parseInt(localStorage.getItem('holiday-consecutive-overdue') || '0', 10); } catch (e) { state.todos = []; state.consecutiveOverdue = 0; } };
+        // --- データ永続化 ---
+        function saveState() {
+             localStorage.setItem('holiday-todos', JSON.stringify(state.todos));
+             localStorage.setItem('holiday-consecutive-overdue', state.consecutiveOverdue);
+        };
+        function loadState() {
+            try {
+                const t = localStorage.getItem('holiday-todos');
+                state.todos = t ? JSON.parse(t) : [];
+                state.consecutiveOverdue = parseInt(localStorage.getItem('holiday-consecutive-overdue') || '0', 10);
+            } catch (e) {
+                state.todos = [];
+                state.consecutiveOverdue = 0;
+            }
+        };
 
         // --- カレンダー関連 (変更なし) ---
         function renderCalendar() { const h = document.getElementById('calendar-header'), g = document.getElementById('calendar-grid'); if (!h || !g) return; const { year: y, month: m } = { year: state.currentDate.getFullYear(), month: state.currentDate.getMonth() }; h.textContent = `${y}年 ${m + 1}月`; g.innerHTML = ''; ['日', '月', '火', '水', '木', '金', '土'].forEach(d => g.innerHTML += `<div class="font-semibold text-gray-600 text-xs">${d}</div>`); const f = new Date(y, m, 1).getDay(); for (let i = 0; i < f; i++) g.appendChild(document.createElement('div')); const ds = new Date(y, m + 1, 0).getDate(); const t = new Date().setHours(0, 0, 0, 0); for (let i = 1; i <= ds; i++) { const e = document.createElement('button'); const d = new Date(y, m, i); e.className = 'relative p-2 rounded-full hover:bg-gray-100 transition-colors'; e.textContent = i; if (d.setHours(0, 0, 0, 0) === t) e.classList.add('is-today'); const ht = state.todos.some(td => { const dt = new Date(td.deadline); return dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === i; }); if (ht) e.innerHTML += '<div class="calendar-dot"></div>'; g.appendChild(e); } };
