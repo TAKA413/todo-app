@@ -11,32 +11,15 @@
     
     <!-- このファイル内にCSSを直接記述 -->
     <style>
-        /* ▼ 修正: Flexboxを使って、より堅牢なレイアウトに再設計 */
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden; /* ページ全体のスクロールを禁止 */
-        }
+        /* ▼ 修正: レイアウトの根本的な見直し */
         body {
             font-family: 'Inter', 'Noto Sans JP', sans-serif;
             background-color: #f9fafb;
             color: #1f2937;
-            display: flex;
-            flex-direction: column;
+            padding-bottom: 100px; /* フッターの高さ分の余白を確保 */
+            padding-top: 20px;
             -webkit-tap-highlight-color: transparent;
         }
-        #app-body {
-            flex: 1; /* 残りの高さをすべて埋める */
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        #app-wrapper {
-            flex: 1;
-            overflow-y: auto; /* コンテンツ部分のみスクロール可能に */
-        }
-        /* ▲ ここまでレイアウトの修正 */
 
         .task-item {
             display: grid;
@@ -74,6 +57,11 @@
 
         /* --- ガーディアンモードのスタイル --- */
         #guardian-banner-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 30; /* フッター(40)より下 */
             padding: 10px;
             background-color: #f9fafb;
             max-width: 100%;
@@ -153,14 +141,17 @@
 </head>
 <body>
 
-    <div id="app-body">
-        <div id="guardian-banner-container"></div>
-        <div id="app-wrapper">
-            <div id="app-container" class="max-w-2xl mx-auto p-4"></div>
-        </div>
+    <div id="guardian-banner-container"></div>
+
+    <div id="app-container" class="max-w-2xl mx-auto p-4"></div>
+
+    <!-- モーダル表示エリア -->
+    <div id="modal-backdrop" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+        <div id="modal-content" class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center transform"></div>
     </div>
-    
-    <footer class="bg-white border-t border-gray-200 shadow-t-sm">
+
+    <!-- フッターナビゲーション -->
+    <footer class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-t-sm">
         <nav class="max-w-2xl mx-auto flex justify-around">
             <button data-view="list" class="nav-button active flex-1 py-3 text-center"><i class="fas fa-list-ul fa-lg"></i><span class="block text-xs font-medium">メイン</span></button>
             <button data-view="matrix" class="nav-button flex-1 py-3 text-center text-gray-500"><i class="fas fa-th-large fa-lg"></i><span class="block text-xs font-medium">マトリクス</span></button>
@@ -168,11 +159,6 @@
             <button data-view="account" class="nav-button flex-1 py-3 text-center text-gray-500"><i class="fas fa-user-circle fa-lg"></i><span class="block text-xs font-medium">アカウント</span></button>
         </nav>
     </footer>
-
-    <!-- モーダル表示エリア -->
-    <div id="modal-backdrop" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
-        <div id="modal-content" class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center transform"></div>
-    </div>
 
     <script type="module">
         // --- 状態管理 ---
@@ -356,7 +342,6 @@
             if (target.closest('.matrix-task')) showDetailModal(target.closest('.matrix-task').dataset.id);
         }
 
-        // ▼ 修正: データの保存・更新ロジックを修正
         function handleFormSubmit(e) {
             if (e.target.id === 'create-form') {
                 e.preventDefault();
@@ -375,7 +360,7 @@
                     isGuardian: formData.has('isGuardian'),
                 };
 
-                loadState(); // 念のため、保存直前の最新データを読み込む
+                loadState(); 
 
                 if (todoId) {
                     const index = state.todos.findIndex(t => t.id === todoId);
