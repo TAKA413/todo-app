@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>HOLIDAY ToDo Lite</title>
+  <title>HOLIDAY ToDo Lite v2</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body, html {
@@ -54,6 +54,11 @@
       </form>
     </section>
 
+    <section id="matrix-view" class="hidden">
+      <h1 class="text-xl font-bold mb-4">優先順位マトリクス</h1>
+      <p class="text-gray-500">※ この画面は開発中です。</p>
+    </section>
+
     <section id="account-view" class="hidden">
       <h1 class="text-xl font-bold mb-4">アカウント</h1>
       <button id="clear-all" class="w-full bg-red-500 text-white p-2 rounded">全データ削除</button>
@@ -63,6 +68,7 @@
   <footer>
     <button class="nav-btn active" data-target="list-view">メイン</button>
     <button class="nav-btn" data-target="create-view">作成</button>
+    <button class="nav-btn" data-target="matrix-view">マトリクス</button>
     <button class="nav-btn" data-target="account-view">アカウント</button>
   </footer>
 
@@ -70,7 +76,7 @@
     const todos = JSON.parse(localStorage.getItem("todos") || "[]");
     const listEl = document.getElementById("todo-list");
     const form = document.getElementById("todo-form");
-    const views = ["list-view", "create-view", "account-view"];
+    const views = ["list-view", "create-view", "matrix-view", "account-view"];
 
     function saveTodos() {
       localStorage.setItem("todos", JSON.stringify(todos));
