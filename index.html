@@ -10,39 +10,52 @@
 
   <style>
     html, body {
-      height: 100%;
       margin: 0;
       padding: 0;
+      height: 100vh;
       overflow: hidden;
-    }
-    body {
       font-family: 'Inter', 'Noto Sans JP', sans-serif;
       background-color: #f9fafb;
       color: #1f2937;
       display: flex;
       flex-direction: column;
-      -webkit-tap-highlight-color: transparent;
     }
+
     #app-body {
       flex: 1;
       display: flex;
       flex-direction: column;
       overflow: hidden;
     }
+
     #app-wrapper {
       flex: 1;
       overflow-y: auto;
+      min-height: 0;
     }
+
+    footer {
+      position: sticky;
+      bottom: 0;
+      z-index: 50;
+    }
+
+    .nav-button.active {
+      color: #0284c7;
+    }
+
     .task-item {
       display: grid;
       grid-template-columns: auto 1fr auto;
       align-items: center;
       gap: 1rem;
     }
+
     .task-item.completed .task-title {
       text-decoration: line-through;
       color: #9ca3af;
     }
+
     .calendar-dot {
       width: 6px;
       height: 6px;
@@ -53,91 +66,22 @@
       left: 50%;
       transform: translateX(-50%);
     }
+
     .is-today {
       background-color: #e0f2fe;
       color: #0ea5e9;
       font-weight: bold;
     }
-    .nav-button.active {
-      color: #0284c7;
-    }
-    .modal-enter-active {
-      animation: fadeIn 0.2s ease-out;
-    }
-    .modal-leave-active {
-      animation: fadeOut 0.2s ease-in;
-    }
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: scale(0.95);
-      }
-      to {
-        opacity: 1;
-        transform: scale(1);
-      }
-    }
-    @keyframes fadeOut {
-      from {
-        opacity: 1;
-        transform: scale(1);
-      }
-      to {
-        opacity: 0;
-        transform: scale(0.95);
-      }
-    }
-    #guardian-banner-container {
-      padding: 10px;
-      background-color: #f9fafb;
-      max-width: 100%;
-    }
-    .guardian-banner {
-      animation: pulse-bg 2s infinite;
-      padding: 0.75rem;
-    }
-    .guardian-text-flash {
-      color: #facc15;
-      font-size: 1.125rem;
-      animation: flash-yellow 1.5s infinite;
-    }
-    @keyframes flash-yellow {
-      0%, 100% {
-        color: #facc15;
-        opacity: 1;
-        transform: scale(1.05);
-      }
-      50% {
-        color: #fde047;
-        opacity: 0.8;
-        transform: scale(1);
-      }
-    }
+
     .guardian-task {
       border: 2px solid #f87171;
       box-shadow: 0 0 15px rgba(248, 113, 113, 0.5);
       animation: pulse-border 2s infinite;
     }
+
     @keyframes pulse-border {
-      0%, 100% {
-        border-color: #f87171;
-      }
-      50% {
-        border-color: #dc2626;
-      }
-    }
-    @keyframes pulse-bg {
-      0%, 100% {
-        background-color: #ef4444;
-      }
-      50% {
-        background-color: #dc2626;
-      }
-    }
-    footer {
-      position: sticky;
-      bottom: 0;
-      z-index: 50;
+      0%, 100% { border-color: #f87171; }
+      50% { border-color: #dc2626; }
     }
   </style>
 </head>
@@ -148,67 +92,183 @@
       <div id="app-container" class="max-w-2xl mx-auto p-4"></div>
     </div>
   </div>
+
   <footer class="bg-white border-t border-gray-200 shadow-t-sm sticky bottom-0 z-50">
     <nav class="max-w-2xl mx-auto flex justify-around">
-      <button data-view="list" class="nav-button active flex-1 py-3 text-center"><i class="fas fa-list-ul fa-lg"></i><span class="block text-xs font-medium">メイン</span></button>
-      <button data-view="matrix" class="nav-button flex-1 py-3 text-center text-gray-500"><i class="fas fa-th-large fa-lg"></i><span class="block text-xs font-medium">マトリクス</span></button>
-      <button data-view="create" class="nav-button flex-1 py-3 text-center text-gray-500"><i class="fas fa-plus-square fa-lg"></i><span class="block text-xs font-medium">新規作成</span></button>
-      <button data-view="account" class="nav-button flex-1 py-3 text-center text-gray-500"><i class="fas fa-user-circle fa-lg"></i><span class="block text-xs font-medium">アカウント</span></button>
+      <button data-view="list" class="nav-button active flex-1 py-3 text-center">
+        <i class="fas fa-list-ul fa-lg"></i><span class="block text-xs font-medium">メイン</span>
+      </button>
+      <button data-view="matrix" class="nav-button flex-1 py-3 text-center text-gray-500">
+        <i class="fas fa-th-large fa-lg"></i><span class="block text-xs font-medium">マトリクス</span>
+      </button>
+      <button data-view="create" class="nav-button flex-1 py-3 text-center text-gray-500">
+        <i class="fas fa-plus-square fa-lg"></i><span class="block text-xs font-medium">新規作成</span>
+      </button>
+      <button data-view="account" class="nav-button flex-1 py-3 text-center text-gray-500">
+        <i class="fas fa-user-circle fa-lg"></i><span class="block text-xs font-medium">アカウント</span>
+      </button>
     </nav>
   </footer>
-  <script type="module">
-  const state = {
-    todos: [],
-    currentFilter: 'all',
-    currentDate: new Date(),
-    consecutiveOverdue: 0,
-  };
 
-  document.addEventListener('DOMContentLoaded', () => {
-    loadState();
-    navigateTo('list');
-    addEventListeners();
-  });
+  <!-- モーダル（詳細表示やポップアップ） -->
+  <div id="modal-backdrop" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+    <div id="modal-content" class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center transform"></div>
+  </div>
+    <script type="module">
+    const state = {
+      todos: [],
+      currentFilter: 'all',
+      currentDate: new Date(),
+      consecutiveOverdue: 0,
+    };
 
-  function handleFormSubmit(e) {
-    if (e.target.id === 'create-form') {
-      e.preventDefault();
-      const formData = new FormData(e.target);
-      const todoId = formData.get('id');
+    const templates = {
+      list: `<h1 class="text-xl font-bold mb-4">HOLIDAY ToDo</h1><ul id="todo-list" class="space-y-2"></ul>`,
+      create: `<h1 class="text-xl font-bold mb-4">新規作成</h1>
+        <form id="create-form" class="space-y-4">
+          <input type="hidden" name="id" id="edit-todo-id">
+          <input id="title" name="title" placeholder="件名" required class="w-full border rounded p-2" />
+          <textarea id="content" name="content" placeholder="内容" required class="w-full border rounded p-2"></textarea>
+          <input id="deadline" name="deadline" type="datetime-local" required class="w-full border rounded p-2" />
+          <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded">保存</button>
+        </form>`,
+      account: `<h1 class="text-xl font-bold mb-4">アカウント</h1><button id="delete-all-data" class="w-full bg-red-500 text-white p-2 rounded">全データ削除</button>`,
+      matrix: `<h1 class="text-xl font-bold mb-4">マトリクス（準備中）</h1>`
+    };
 
-      const todoData = {
-        title: formData.get('title'),
-        content: formData.get('content'),
-        deadline: formData.get('deadline'),
-        spreadsheet_url: formData.get('spreadsheet_url'),
-        impact: formData.get('impact'),
-        repeat: formData.get('repeat'),
-        importance: formData.get('importance'),
-        urgency: formData.get('urgency'),
-        isGuardian: formData.has('isGuardian'),
-      };
+    const appContainer = document.getElementById('app-container');
 
+    document.addEventListener('DOMContentLoaded', () => {
       loadState();
+      navigateTo('list');
+      addEventListeners();
+    });
 
-      if (todoId) {
-        const index = state.todos.findIndex(t => t.id === todoId);
-        if (index !== -1) {
-          state.todos[index] = { ...state.todos[index], ...todoData };
+    function navigateTo(view) {
+      appContainer.innerHTML = templates[view];
+      document.querySelectorAll('.nav-button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === view);
+        btn.classList.toggle('text-gray-500', btn.dataset.view !== view);
+      });
+
+      if (view === 'list') renderTodoList();
+      else if (view === 'create') {
+        const now = new Date();
+        now.setMinutes(Math.ceil(now.getMinutes() / 15) * 15);
+        document.getElementById('deadline').value = now.toISOString().slice(0, 16);
+      }
+    }
+
+    function addEventListeners() {
+      document.querySelector('footer').addEventListener('click', e => {
+        const btn = e.target.closest('.nav-button');
+        if (btn) navigateTo(btn.dataset.view);
+      });
+
+      document.addEventListener('submit', e => {
+        if (e.target.id === 'create-form') {
+          e.preventDefault();
+          const fd = new FormData(e.target);
+          const id = fd.get('id');
+          const todo = {
+            id: id || Date.now().toString(),
+            title: fd.get('title'),
+            content: fd.get('content'),
+            deadline: fd.get('deadline'),
+            completed: false
+          };
+          if (id) {
+            const idx = state.todos.findIndex(t => t.id === id);
+            if (idx !== -1) state.todos[idx] = todo;
+          } else {
+            state.todos.push(todo);
+          }
+          saveState();
+          navigateTo('list');
+          setTimeout(renderTodoList, 0);
         }
-      } else {
-        todoData.id = Date.now().toString();
-        todoData.completed = false;
-        state.todos.push(todoData);
+      });
+
+      document.addEventListener('click', e => {
+        if (e.target.closest('#delete-all-data')) {
+          if (confirm('本当に全データを削除しますか？')) {
+            state.todos = [];
+            saveState();
+            renderTodoList();
+          }
+        }
+      });
+    }
+
+    function renderTodoList() {
+      const list = document.getElementById('todo-list');
+      if (!list) return;
+      list.innerHTML = '';
+      if (state.todos.length === 0) {
+        list.innerHTML = '<li class="text-center text-gray-500">タスクはまだありません。</li>';
+        return;
+      }
+      const sorted = [...state.todos].sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+      for (const t of sorted) {
+        const li = document.createElement('li');
+        li.className = 'task-item bg-white p-3 rounded shadow';
+        li.innerHTML = `
+          <div><input type="checkbox" ${t.completed ? 'checked' : ''} data-id="${t.id}" class="mr-2"/></div>
+          <div class="flex-1">
+            <p class="task-title font-medium ${t.completed ? 'line-through text-gray-400' : ''}">${t.title}</p>
+            <p class="text-xs text-gray-500">${formatDate(new Date(t.deadline))}</p>
+          </div>
+          <button class="text-red-500 delete-button" data-id="${t.id}"><i class="fas fa-trash"></i></button>
+        `;
+        list.appendChild(li);
       }
 
-      state.currentFilter = 'all';
-      saveState();
-      navigateTo('list');
-      setTimeout(renderTodoList, 0); // ← ここが追加された修正ポイント
-    }
-  }
+      list.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', e => {
+          const id = e.target.dataset.id;
+          const todo = state.todos.find(t => t.id === id);
+          if (todo) {
+            todo.completed = e.target.checked;
+            saveState();
+            renderTodoList();
+          }
+        });
+      });
 
-  // ここから先の関数（renderTodoList、toggleTodoCompletion、saveState など）は前回のコードと同様です。
-</script>
+      list.querySelectorAll('.delete-button').forEach(btn => {
+        btn.addEventListener('click', e => {
+          const id = e.target.closest('button').dataset.id;
+          state.todos = state.todos.filter(t => t.id !== id);
+          saveState();
+          renderTodoList();
+        });
+      });
+    }
+
+    function saveState() {
+      localStorage.setItem('holiday-todos', JSON.stringify(state.todos));
+    }
+
+    function loadState() {
+      const saved = localStorage.getItem('holiday-todos');
+      if (saved) {
+        try {
+          state.todos = JSON.parse(saved);
+        } catch {
+          state.todos = [];
+        }
+      }
+    }
+
+    function formatDate(d) {
+      return new Intl.DateTimeFormat('ja-JP', {
+        month: 'numeric',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }).format(d);
+    }
+  </script>
 </body>
 </html>
