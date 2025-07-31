@@ -260,7 +260,7 @@
                         </label>
                     </div>
                     <button type="button" id="submit-create-form-btn" class="w-full bg-sky-500 text-white font-semibold py-3 px-4 rounded-lg hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors">作成する</button>
-                    </form>`,
+                </form>`,
             matrix: `
                 <h1 class="text-3xl font-bold text-gray-800 mb-4 text-center">優先順位を確認</h1>
                 <div class="matrix-grid">
@@ -305,9 +305,25 @@
         const modalContent = document.getElementById('modal-content');
         const guardianBannerContainer = document.getElementById('guardian-banner-container');
 
+        // ▼▼▼【重要修正点】▼▼▼
+        // localStorageが利用可能かチェックする機能
+        function isLocalStorageAvailable() {
+            let storage;
+            try {
+                storage = window.localStorage;
+                const x = '__storage_test__';
+                storage.setItem(x, x);
+                storage.removeItem(x);
+                return true;
+            } catch (e) {
+                return e instanceof DOMException && (e.code === 22 || e.code === 1014 || e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') && (storage && storage.length !== 0);
+            }
+        }
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
         // --- 初期化処理 ---
         document.addEventListener('DOMContentLoaded', () => {
-            loadState();
+            loadState(); // ここでlocalStorageが使えるか最初にチェック
             navigateTo('list');
             addEventListeners();
         });
@@ -327,7 +343,6 @@
                 }
             });
             
-            // イベント委任：documentでイベントを一元管理し、動的に追加される要素にも対応
             document.addEventListener('click', handleAppContainerClick);
             document.addEventListener('dragstart', handleDragStart);
             document.addEventListener('dragover', handleDragOver);
@@ -338,7 +353,6 @@
         // --- クリックイベントの処理を一元化 ---
         function handleAppContainerClick(e) {
             const target = e.target;
-            // app-containerの外で発生したクリックは無視
             if (!target.closest('#app-container')) return;
 
             if (target.closest('#todo-tabs')) handleTabClick(e);
@@ -351,13 +365,9 @@
             if (target.closest('#morning-briefing-btn')) getMorningBriefing();
             if (target.closest('#tomorrow-briefing-btn')) getTomorrowBriefing();
             if (target.closest('.matrix-task')) showDetailModal(target.closest('.matrix-task').dataset.id);
-            
-            // ▼▼▼【重要修正点】▼▼▼
-            // 新規作成/更新ボタンのクリックイベントをここで処理
             if (target.id === 'submit-create-form-btn') {
                 handleFormSubmit();
             }
-            // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲
         }
 
         // --- フォーム送信処理 ---
@@ -380,25 +390,24 @@
                 isGuardian: formData.has('isGuardian'),
             };
             
-            // 簡単な入力チェック
             if (!todoData.title || !todoData.content || !todoData.deadline) {
                 showModal(`<p class="text-red-500">件名、タスク内容、期限は必須項目です。</p><button class="modal-close-button mt-4 bg-gray-200 py-2 px-4 rounded-lg">OK</button>`);
                 return;
             }
 
-            if (todoId) { // 編集の場合
+            if (todoId) {
                 const index = state.todos.findIndex(t => t.id === todoId);
                 if (index !== -1) {
                     state.todos[index] = { ...state.todos[index], ...todoData };
                 }
-            } else { // 新規作成の場合
+            } else {
                 todoData.id = Date.now().toString();
                 todoData.completed = false;
                 state.todos.push(todoData);
             }
             
             state.currentFilter = 'all';
-            saveState();
+            saveState(); // ここで保存エラーが起きる可能性がある
             navigateTo('list');
         }
 
@@ -424,11 +433,26 @@
         }
 
         // --- データ永続化 ---
+        // ▼▼▼【重要修正点】▼▼▼
+        // saveStateとloadStateにエラーハンドリングと警告表示を追加
         function saveState() {
-             localStorage.setItem('holiday-todos', JSON.stringify(state.todos));
-             localStorage.setItem('holiday-consecutive-overdue', state.consecutiveOverdue);
+            if (!isLocalStorageAvailable()) {
+                // 既に警告済みなので、ここでは何もしない
+                return;
+            }
+            try {
+                localStorage.setItem('holiday-todos', JSON.stringify(state.todos));
+                localStorage.setItem('holiday-consecutive-overdue', state.consecutiveOverdue);
+            } catch (e) {
+                console.error("データの保存に失敗しました:", e);
+                showModal(`<h3 class="text-xl font-bold mb-2 text-red-600">保存エラー</h3><p class="text-gray-600 text-left">タスクの保存に失敗しました。<br>お使いのブラウザのプライバシー設定が原因である可能性があります。</p><button class="modal-close-button mt-4 bg-gray-200 py-2 px-4 rounded-lg">OK</button>`);
+            }
         };
         function loadState() {
+            if (!isLocalStorageAvailable()) {
+                showModal(`<h3 class="text-xl font-bold mb-2 text-red-600">保存機能のエラー</h3><p class="text-gray-600 text-left">お使いのブラウザ設定（Google Chromeのプライバシー設定など）により、タスクを保存する機能がブロックされています。<br><br><b>このアプリを正常に利用するには、ブラウザの設定変更、またはSafariなど別のブラウザをお試しください。</b></p><button class="modal-close-button mt-6 w-full bg-gray-200 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">理解しました</button>`);
+                return;
+            }
             try {
                 const t = localStorage.getItem('holiday-todos');
                 state.todos = t ? JSON.parse(t) : [];
@@ -439,6 +463,8 @@
                 state.consecutiveOverdue = 0;
             }
         };
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
         // --- カレンダー関連 ---
         function renderCalendar() { const h = document.getElementById('calendar-header'), g = document.getElementById('calendar-grid'); if (!h || !g) return; const { year: y, month: m } = { year: state.currentDate.getFullYear(), month: state.currentDate.getMonth() }; h.textContent = `${y}年 ${m + 1}月`; g.innerHTML = ''; ['日', '月', '火', '水', '木', '金', '土'].forEach(d => g.innerHTML += `<div class="font-semibold text-gray-600 text-xs">${d}</div>`); const f = new Date(y, m, 1).getDay(); for (let i = 0; i < f; i++) g.appendChild(document.createElement('div')); const ds = new Date(y, m + 1, 0).getDate(); const t = new Date().setHours(0, 0, 0, 0); for (let i = 1; i <= ds; i++) { const e = document.createElement('button'); const d = new Date(y, m, i); e.className = 'relative p-2 rounded-full hover:bg-gray-100 transition-colors'; e.textContent = i; if (d.setHours(0, 0, 0, 0) === t) e.classList.add('is-today'); const ht = state.todos.some(td => { const dt = new Date(td.deadline); return dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === i; }); if (ht) e.innerHTML += '<div class="calendar-dot"></div>'; g.appendChild(e); } };
         function changeMonth(offset) { state.currentDate.setMonth(state.currentDate.getMonth() + offset); renderCalendar(); };
@@ -564,7 +590,7 @@
             const wrapper = document.getElementById('app-wrapper');
             if (wrapper) {
                 const totalBannerHeight = guardianBannerContainer.offsetHeight;
-                // wrapper.style.paddingTop = `${totalBannerHeight}px`; // バナーとコンテンツが重なるため一旦コメントアウト
+                // wrapper.style.paddingTop = `${totalBannerHeight}px`;
             }
         }
 
