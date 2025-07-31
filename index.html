@@ -334,7 +334,7 @@
                     switchToEditView(target.closest('#edit-from-detail-btn').dataset.id);
                 }
             });
-            // ▼ 修正: イベントリスナーの対象を appContainer から document に変更
+            // ▼ 修正: イベントリスナーの対象を document に変更し、確実に捉える
             document.addEventListener('click', handleAppContainerClick);
             document.addEventListener('submit', handleFormSubmit);
             document.addEventListener('dragstart', handleDragStart);
@@ -345,6 +345,9 @@
 
         function handleAppContainerClick(e) {
             const target = e.target;
+            // app-container の外で発生したクリックは無視
+            if (!target.closest('#app-container')) return;
+
             if (target.closest('#todo-tabs')) handleTabClick(e);
             if (target.closest('#todo-list')) handleListClick(e);
             if (target.closest('#prev-month')) changeMonth(-1);
