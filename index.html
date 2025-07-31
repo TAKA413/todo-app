@@ -305,8 +305,6 @@
         const modalContent = document.getElementById('modal-content');
         const guardianBannerContainer = document.getElementById('guardian-banner-container');
 
-        // ▼▼▼【重要修正点】▼▼▼
-        // localStorageが利用可能かチェックする機能
         function isLocalStorageAvailable() {
             let storage;
             try {
@@ -319,13 +317,16 @@
                 return e instanceof DOMException && (e.code === 22 || e.code === 1014 || e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') && (storage && storage.length !== 0);
             }
         }
-        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
         // --- 初期化処理 ---
         document.addEventListener('DOMContentLoaded', () => {
-            loadState(); // ここでlocalStorageが使えるか最初にチェック
+            loadState(); 
             navigateTo('list');
             addEventListeners();
+            // ▼▼▼【重要追加点】▼▼▼
+            // 通知の初期設定を行う
+            setupNotifications();
+            // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲
         });
         // --- イベントリスナー設定 ---
         function addEventListeners() {
@@ -388,6 +389,7 @@
                 importance: formData.get('importance'),
                 urgency: formData.get('urgency'),
                 isGuardian: formData.has('isGuardian'),
+                notified: false // ▼▼▼【重要追加点】通知済みフラグを追加
             };
             
             if (!todoData.title || !todoData.content || !todoData.deadline) {
@@ -398,6 +400,8 @@
             if (todoId) {
                 const index = state.todos.findIndex(t => t.id === todoId);
                 if (index !== -1) {
+                    // 編集時は元の通知フラグを維持する
+                    todoData.notified = state.todos[index].notified;
                     state.todos[index] = { ...state.todos[index], ...todoData };
                 }
             } else {
@@ -407,7 +411,7 @@
             }
             
             state.currentFilter = 'all';
-            saveState(); // ここで保存エラーが起きる可能性がある
+            saveState();
             navigateTo('list');
         }
 
@@ -433,13 +437,8 @@
         }
 
         // --- データ永続化 ---
-        // ▼▼▼【重要修正点】▼▼▼
-        // saveStateとloadStateにエラーハンドリングと警告表示を追加
         function saveState() {
-            if (!isLocalStorageAvailable()) {
-                // 既に警告済みなので、ここでは何もしない
-                return;
-            }
+            if (!isLocalStorageAvailable()) { return; }
             try {
                 localStorage.setItem('holiday-todos', JSON.stringify(state.todos));
                 localStorage.setItem('holiday-consecutive-overdue', state.consecutiveOverdue);
@@ -463,8 +462,7 @@
                 state.consecutiveOverdue = 0;
             }
         };
-        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-
+        
         // --- カレンダー関連 ---
         function renderCalendar() { const h = document.getElementById('calendar-header'), g = document.getElementById('calendar-grid'); if (!h || !g) return; const { year: y, month: m } = { year: state.currentDate.getFullYear(), month: state.currentDate.getMonth() }; h.textContent = `${y}年 ${m + 1}月`; g.innerHTML = ''; ['日', '月', '火', '水', '木', '金', '土'].forEach(d => g.innerHTML += `<div class="font-semibold text-gray-600 text-xs">${d}</div>`); const f = new Date(y, m, 1).getDay(); for (let i = 0; i < f; i++) g.appendChild(document.createElement('div')); const ds = new Date(y, m + 1, 0).getDate(); const t = new Date().setHours(0, 0, 0, 0); for (let i = 1; i <= ds; i++) { const e = document.createElement('button'); const d = new Date(y, m, i); e.className = 'relative p-2 rounded-full hover:bg-gray-100 transition-colors'; e.textContent = i; if (d.setHours(0, 0, 0, 0) === t) e.classList.add('is-today'); const ht = state.todos.some(td => { const dt = new Date(td.deadline); return dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === i; }); if (ht) e.innerHTML += '<div class="calendar-dot"></div>'; g.appendChild(e); } };
         function changeMonth(offset) { state.currentDate.setMonth(state.currentDate.getMonth() + offset); renderCalendar(); };
@@ -668,6 +666,72 @@
 
         // --- ヘルパー関数 ---
         function formatDate(d, w = false) { const o = { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }; if (w) o.year = 'numeric'; return new Intl.DateTimeFormat('ja-JP', o).format(d); };
+
+        // ▼▼▼【重要追加点】ここから通知関連の機能 ▼▼▼
+
+        /**
+         * 通知機能の初期設定。許可を求め、定期チェックを開始する
+         */
+        function setupNotifications() {
+            // 1. ブラウザが通知機能に対応しているか確認
+            if (!('Notification' in window)) {
+                console.log('このブラウザは通知機能に対応していません。');
+                return;
+            }
+
+            // 2. 既に許可されているか確認し、そうでなければ許可を求める
+            if (Notification.permission !== 'granted') {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        console.log('通知が許可されました！');
+                        startNotificationChecker();
+                    } else {
+                        console.log('通知が拒否されました。');
+                    }
+                });
+            } else {
+                startNotificationChecker();
+            }
+        }
+
+        /**
+         * 通知の定期チェックを開始する
+         */
+        function startNotificationChecker() {
+            console.log('通知の定期チェックを開始します。');
+            // 60秒（60000ミリ秒）ごとに期限をチェックする
+            setInterval(checkDueTasksAndNotify, 60000); 
+        }
+
+        /**
+         * 期限が来たタスクをチェックして通知を送る
+         */
+        function checkDueTasksAndNotify() {
+            const now = new Date();
+            console.log(`タスクの期限をチェック中... (${now.toLocaleTimeString()})`);
+
+            state.todos.forEach(todo => {
+                const deadline = new Date(todo.deadline);
+
+                // 未完了 & 未通知 & 期限が現在時刻を過ぎているかチェック
+                if (!todo.completed && !todo.notified && deadline <= now) {
+                    console.log(`期限の来たタスクを発見: ${todo.title}`);
+                    
+                    // デスクトップ通知を表示
+                    new Notification('⏰ 時間です！', {
+                        body: `「${todo.title}」の期限になりました。`,
+                        icon: 'https://cdn-icons-png.flaticon.com/512/1041/1041833.png' // アイコン画像
+                    });
+
+                    // 通知済みフラグを立てて、二重通知を防ぐ
+                    todo.notified = true;
+                }
+            });
+
+            // 変更（通知済みフラグ）を保存
+            saveState();
+        }
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
     </script>
 </body>
