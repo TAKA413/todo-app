@@ -4,14 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HOLIDAY ToDo (最終修正版)</title>
-    <!-- 外部ライブラリの読み込み -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     
-    <!-- このファイル内にCSSを直接記述 -->
     <style>
-        /* ▼ 修正: Flexboxを使って、より堅牢なレイアウトに再設計 */
+        /* Flexboxを使った堅牢なレイアウト設計 */
         html, body {
             height: 100%;
             margin: 0;
@@ -36,7 +34,6 @@
             flex: 1;
             overflow-y: auto; /* コンテンツ部分のみスクロール可能に */
         }
-        /* ▲ ここまでレイアウトの修正 */
 
         .task-item {
             display: grid;
@@ -169,7 +166,6 @@
         </nav>
     </footer>
 
-    <!-- モーダル表示エリア -->
     <div id="modal-backdrop" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
         <div id="modal-content" class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center transform"></div>
     </div>
@@ -182,14 +178,12 @@
             currentDate: new Date(),
             consecutiveOverdue: 0,
         };
-
-        // --- メッセージ集 (変更なし) ---
+        // --- メッセージ集 ---
         const messages = {
             reward: ["お疲れ様！これで心置きなくおやつが食べられますね！", "タスク完了！あなたは天才ですか？いいえ、努力の天才です。", "素晴らしい！その調子で次のご褒美もゲットだ！", "完了！まるでゲームのクエストをクリアした気分！", "お見事！脳内にドーパミンが溢れ出ているはず！", "一つ完了、一つ成長。未来のあなたに感謝されるでしょう。", "完璧です！今日は枕を高くして眠れますね。", "任務完了！自分を褒めてあげましょう。ビールがうまい！", "ナイス！ToDoリストが軽くなると心も軽くなる！", "やりましたね！その達成感、噛しめてください。", "完了おめでとう！あなたは自分の人生のキャプテンです。", "あなたの集中力に乾杯！", "このタスク、もはやあなたの伝説の一部です。", "やるべきことが片付くと、世界が輝いて見えませんか？", "OK、Google。今日の私、最高。", "一歩一歩が、大きな未来へ繋がっています。", "完了ボタンを押す、その瞬間がたまらない！", "よく頑張りました！ご褒美に好きな曲でも聴きますか？", "これで安心して次の沼にハマれますね。", "さすが！デキる人は違いますね！"],
             gentle: ["お疲れ様です。期限は過ぎちゃったけど、完了できてえらい！", "大丈夫、誰にでもそういう日はあります。まずは一つ完了！", "完了おめでとう！次はもう少しだけ早めにトライしてみましょうか。", "気にしないで！終わらせたことが一番大事です。", "セーフ！…とは言えないけど、よく頑張りました！", "期限はあくまで目安。あなたのペースで大丈夫ですよ。", "一つクリア！遅れても、やらないよりずっといい。", "ドンマイ！この経験を次に活かしましょう。", "焦らなくても大丈夫。あなたの頑張り、ちゃんと見てますよ。", "間に合わなかったけど、最後までやり遂げたあなたを尊敬します。"],
             strict: ["また期限過ぎてますよ。そろそろ本気出しませんか？", "３回目ですね。このタスク、本当にやる気ありますか？", "「後でやろう」は「やらない」の仲間です。自覚してください。", "警告です。計画性という言葉、辞書で引いてみては？", "あなたの「締め切り」は、ただの「希望日」ですか？", "このままでは、ただの「やるやる詐欺」ですよ。", "未来の自分に謝りましょう。今のあなたのせいで苦労するのですから。", "カレンダー、見てますか？時計、動いてますか？", "うーん、この調子だと信頼を失いますよ。まずは自分からの。", "厳しいことを言いますが、これが現実です。次はありませんよ。"]
         };
-
         // --- HTMLテンプレート ---
         const templates = {
             list: `
@@ -265,8 +259,8 @@
                             <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-red-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
                         </label>
                     </div>
-                    <button type="submit" class="w-full bg-sky-500 text-white font-semibold py-3 px-4 rounded-lg hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors">作成する</button>
-                </form>`,
+                    <button type="button" id="submit-create-form-btn" class="w-full bg-sky-500 text-white font-semibold py-3 px-4 rounded-lg hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors">作成する</button>
+                    </form>`,
             matrix: `
                 <h1 class="text-3xl font-bold text-gray-800 mb-4 text-center">優先順位を確認</h1>
                 <div class="matrix-grid">
@@ -305,7 +299,6 @@
                     </div>
                 </div>`
         };
-
         // --- DOM要素 ---
         const appContainer = document.getElementById('app-container');
         const modalBackdrop = document.getElementById('modal-backdrop');
@@ -318,7 +311,6 @@
             navigateTo('list');
             addEventListeners();
         });
-
         // --- イベントリスナー設定 ---
         function addEventListeners() {
             document.querySelector('footer').addEventListener('click', (e) => {
@@ -334,18 +326,19 @@
                     switchToEditView(target.closest('#edit-from-detail-btn').dataset.id);
                 }
             });
-            // ▼ 修正: イベントリスナーの対象を document に変更し、確実に捉える
+            
+            // イベント委任：documentでイベントを一元管理し、動的に追加される要素にも対応
             document.addEventListener('click', handleAppContainerClick);
-            document.addEventListener('submit', handleFormSubmit);
             document.addEventListener('dragstart', handleDragStart);
             document.addEventListener('dragover', handleDragOver);
             document.addEventListener('dragleave', handleDragLeave);
             document.addEventListener('drop', handleDrop);
         }
 
+        // --- クリックイベントの処理を一元化 ---
         function handleAppContainerClick(e) {
             const target = e.target;
-            // app-container の外で発生したクリックは無視
+            // app-containerの外で発生したクリックは無視
             if (!target.closest('#app-container')) return;
 
             if (target.closest('#todo-tabs')) handleTabClick(e);
@@ -358,43 +351,55 @@
             if (target.closest('#morning-briefing-btn')) getMorningBriefing();
             if (target.closest('#tomorrow-briefing-btn')) getTomorrowBriefing();
             if (target.closest('.matrix-task')) showDetailModal(target.closest('.matrix-task').dataset.id);
+            
+            // ▼▼▼【重要修正点】▼▼▼
+            // 新規作成/更新ボタンのクリックイベントをここで処理
+            if (target.id === 'submit-create-form-btn') {
+                handleFormSubmit();
+            }
+            // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲
         }
 
-        function handleFormSubmit(e) {
-            if (e.target.id === 'create-form') {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const todoId = formData.get('id');
+        // --- フォーム送信処理 ---
+        function handleFormSubmit() {
+            const form = document.getElementById('create-form');
+            if (!form) return;
 
-                const todoData = {
-                    title: formData.get('title'),
-                    content: formData.get('content'),
-                    deadline: formData.get('deadline'),
-                    spreadsheet_url: formData.get('spreadsheet_url'),
-                    impact: formData.get('impact'),
-                    repeat: formData.get('repeat'),
-                    importance: formData.get('importance'),
-                    urgency: formData.get('urgency'),
-                    isGuardian: formData.has('isGuardian'),
-                };
+            const formData = new FormData(form);
+            const todoId = formData.get('id');
 
-                loadState(); 
-
-                if (todoId) {
-                    const index = state.todos.findIndex(t => t.id === todoId);
-                    if (index !== -1) {
-                        state.todos[index] = { ...state.todos[index], ...todoData };
-                    }
-                } else {
-                    todoData.id = Date.now().toString();
-                    todoData.completed = false;
-                    state.todos.push(todoData);
-                }
-                
-                state.currentFilter = 'all';
-                saveState();
-                navigateTo('list');
+            const todoData = {
+                title: formData.get('title'),
+                content: formData.get('content'),
+                deadline: formData.get('deadline'),
+                spreadsheet_url: formData.get('spreadsheet_url'),
+                impact: formData.get('impact'),
+                repeat: formData.get('repeat'),
+                importance: formData.get('importance'),
+                urgency: formData.get('urgency'),
+                isGuardian: formData.has('isGuardian'),
+            };
+            
+            // 簡単な入力チェック
+            if (!todoData.title || !todoData.content || !todoData.deadline) {
+                showModal(`<p class="text-red-500">件名、タスク内容、期限は必須項目です。</p><button class="modal-close-button mt-4 bg-gray-200 py-2 px-4 rounded-lg">OK</button>`);
+                return;
             }
+
+            if (todoId) { // 編集の場合
+                const index = state.todos.findIndex(t => t.id === todoId);
+                if (index !== -1) {
+                    state.todos[index] = { ...state.todos[index], ...todoData };
+                }
+            } else { // 新規作成の場合
+                todoData.id = Date.now().toString();
+                todoData.completed = false;
+                state.todos.push(todoData);
+            }
+            
+            state.currentFilter = 'all';
+            saveState();
+            navigateTo('list');
         }
 
         // --- ナビゲーション ---
@@ -429,12 +434,12 @@
                 state.todos = t ? JSON.parse(t) : [];
                 state.consecutiveOverdue = parseInt(localStorage.getItem('holiday-consecutive-overdue') || '0', 10);
             } catch (e) {
+                console.error("データの読み込みに失敗しました:", e);
                 state.todos = [];
                 state.consecutiveOverdue = 0;
             }
         };
-
-        // --- カレンダー関連 (変更なし) ---
+        // --- カレンダー関連 ---
         function renderCalendar() { const h = document.getElementById('calendar-header'), g = document.getElementById('calendar-grid'); if (!h || !g) return; const { year: y, month: m } = { year: state.currentDate.getFullYear(), month: state.currentDate.getMonth() }; h.textContent = `${y}年 ${m + 1}月`; g.innerHTML = ''; ['日', '月', '火', '水', '木', '金', '土'].forEach(d => g.innerHTML += `<div class="font-semibold text-gray-600 text-xs">${d}</div>`); const f = new Date(y, m, 1).getDay(); for (let i = 0; i < f; i++) g.appendChild(document.createElement('div')); const ds = new Date(y, m + 1, 0).getDate(); const t = new Date().setHours(0, 0, 0, 0); for (let i = 1; i <= ds; i++) { const e = document.createElement('button'); const d = new Date(y, m, i); e.className = 'relative p-2 rounded-full hover:bg-gray-100 transition-colors'; e.textContent = i; if (d.setHours(0, 0, 0, 0) === t) e.classList.add('is-today'); const ht = state.todos.some(td => { const dt = new Date(td.deadline); return dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === i; }); if (ht) e.innerHTML += '<div class="calendar-dot"></div>'; g.appendChild(e); } };
         function changeMonth(offset) { state.currentDate.setMonth(state.currentDate.getMonth() + offset); renderCalendar(); };
         function handleCalendarDayClick(e) { const b = e.target.closest('button'); if (!b || !b.textContent) return; const day = parseInt(b.textContent, 10); const d = new Date(state.currentDate.getFullYear(), state.currentDate.getMonth(), day); const s = new Date(d.getFullYear(), d.getMonth(), d.getDate()); const ed = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59); const tds = state.todos.filter(t => { const dt = new Date(t.deadline); return dt >= s && dt <= ed; }); showDayTodosModal(s, tds); };
@@ -453,7 +458,7 @@
                 todoList.innerHTML = `<li class="text-center text-gray-500 py-8"><i class="fas fa-coffee fa-2x mb-2"></i><p>タスクはまだありません。<br>最初のタスクを追加しましょう！</p></li>`;
                 return;
             }
-            const sortedTodos = [...filteredTodos].sort((a, b) => a.completed - b.completed || (b.isGuardian ? 1 : 0) - (a.isGuardian ? 1 : 0));
+            const sortedTodos = [...filteredTodos].sort((a, b) => a.completed - b.completed || new Date(a.deadline) - new Date(b.deadline));
             sortedTodos.forEach(todo => {
                 const li = document.createElement('li');
                 li.className = `task-item bg-white p-4 rounded-xl shadow-sm ${todo.completed ? 'completed' : ''} ${todo.isGuardian && !todo.completed ? 'guardian-task' : ''}`;
@@ -472,9 +477,7 @@
         function toggleTodoCompletion(id, isCompleted) {
             const todo = state.todos.find(t => t.id === id); 
             if (!todo) return;
-            
             todo.completed = isCompleted;
-
             if (isCompleted) {
                 const isOverdue = new Date() > new Date(todo.deadline);
                 let messageType;
@@ -487,7 +490,6 @@
                 }
                 showCompletionModal(messageType);
             }
-            
             saveState();
             renderTodoList();
             renderCalendar();
@@ -503,7 +505,6 @@
         }
 
         function handleTabClick(e) { if (e.target.matches('.tab-button')) { state.currentFilter = e.target.dataset.filter; document.querySelectorAll('.tab-button').forEach(b => { b.classList.remove('text-sky-600', 'border-sky-500'); b.classList.add('text-gray-500', 'border-transparent'); }); e.target.classList.add('text-sky-600', 'border-sky-500'); renderTodoList(); } };
-        
         function getFilteredTodos() {
             if (state.currentFilter === 'all') return state.todos;
             const now = new Date();
@@ -563,7 +564,7 @@
             const wrapper = document.getElementById('app-wrapper');
             if (wrapper) {
                 const totalBannerHeight = guardianBannerContainer.offsetHeight;
-                wrapper.style.paddingTop = `${totalBannerHeight}px`;
+                // wrapper.style.paddingTop = `${totalBannerHeight}px`; // バナーとコンテンツが重なるため一旦コメントアウト
             }
         }
 
@@ -602,43 +603,10 @@
         async function callGemini(prompt) { const apiKey = ""; const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`; const payload = { contents: [{ parts: [{ text: prompt }] }] }; const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) { throw new Error(`API request failed with status ${response.status}`); } const result = await response.json(); if (result.candidates && result.candidates.length > 0) { return result.candidates[0].content.parts[0].text; } else { throw new Error("No content received from API"); } }
 
         // --- ドラッグ＆ドロップ関連 ---
-        function handleDragStart(e) {
-            if (e.target.classList.contains('matrix-task')) {
-                e.target.classList.add('dragging');
-                e.dataTransfer.setData('text/plain', e.target.dataset.id);
-                e.dataTransfer.effectAllowed = 'move';
-            }
-        }
-        function handleDragOver(e) {
-            e.preventDefault();
-            const quadrant = e.target.closest('.matrix-quadrant');
-            if (quadrant) {
-                quadrant.classList.add('drag-over');
-                e.dataTransfer.dropEffect = 'move';
-            }
-        }
-        function handleDragLeave(e) {
-            const quadrant = e.target.closest('.matrix-quadrant');
-            if (quadrant) {
-                quadrant.classList.remove('drag-over');
-            }
-        }
-        function handleDrop(e) {
-            e.preventDefault();
-            const quadrant = e.target.closest('.matrix-quadrant');
-            if (quadrant) {
-                quadrant.classList.remove('drag-over');
-                const todoId = e.dataTransfer.getData('text/plain');
-                const todo = state.todos.find(t => t.id === todoId);
-                if (todo) {
-                    todo.importance = quadrant.dataset.importance;
-                    todo.urgency = quadrant.dataset.urgency;
-                    saveState();
-                    renderMatrixView();
-                }
-            }
-            document.querySelector('.dragging')?.classList.remove('dragging');
-        }
+        function handleDragStart(e) { if (e.target.classList.contains('matrix-task')) { e.target.classList.add('dragging'); e.dataTransfer.setData('text/plain', e.target.dataset.id); e.dataTransfer.effectAllowed = 'move'; } }
+        function handleDragOver(e) { e.preventDefault(); const quadrant = e.target.closest('.matrix-quadrant'); if (quadrant) { quadrant.classList.add('drag-over'); e.dataTransfer.dropEffect = 'move'; } }
+        function handleDragLeave(e) { const quadrant = e.target.closest('.matrix-quadrant'); if (quadrant) { quadrant.classList.remove('drag-over'); } }
+        function handleDrop(e) { e.preventDefault(); const quadrant = e.target.closest('.matrix-quadrant'); if (quadrant) { quadrant.classList.remove('drag-over'); const todoId = e.dataTransfer.getData('text/plain'); const todo = state.todos.find(t => t.id === todoId); if (todo) { todo.importance = quadrant.dataset.importance; todo.urgency = quadrant.dataset.urgency; saveState(); renderMatrixView(); } } document.querySelector('.dragging')?.classList.remove('dragging'); }
 
         // --- モーダルと編集機能 ---
         function showModal(c) { modalContent.innerHTML = c; modalBackdrop.classList.remove('hidden'); modalBackdrop.classList.add('flex'); modalContent.classList.add('modal-enter-active'); setTimeout(() => modalContent.classList.remove('modal-enter-active'), 200); };
@@ -647,26 +615,18 @@
         function showCompletionModal(t) { const m = messages[t][Math.floor(Math.random() * messages[t].length)]; const i = t === 'reward' ? '🎉' : (t === 'gentle' ? '😊' : '😤'); showModal(`<div class="text-5xl mb-4">${i}</div><h3 class="text-xl font-bold mb-2">${t === 'reward' ? 'タスク完了！' : 'お疲れ様です！'}</h3><p class="text-gray-600 mb-6">${m}</p><button class="modal-close-button w-full bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600">閉じる</button>`); };
         function showDetailModal(id) {
             const todo = state.todos.find(t => t.id === id); if (!todo) return;
-            const imp = { "1": '重要', "0": '重要でない' }; const urg = { "1": '緊急', "0": '緊急でない' };
-            const rep = { none: 'なし', daily: '毎日', weekly: '毎週', monthly: '毎月' };
-            const url = todo.spreadsheet_url ? `<a href="${todo.spreadsheet_url}" target="_blank" rel="noopener noreferrer" class="text-sky-600 hover:underline break-all">${todo.spreadsheet_url}</a>` : 'なし';
-            showModal(`<div class="text-left"><h3 class="text-2xl font-bold mb-4">${todo.title}</h3><div class="space-y-3 text-gray-700"><div><strong class="font-semibold block text-sm">タスク内容:</strong><p class="whitespace-pre-wrap">${todo.content}</p></div><div><strong class="font-semibold">期限:</strong> ${formatDate(new Date(todo.deadline), true)}</div><div><strong class="font-semibold">影響:</strong> ${todo.impact || '未設定'}</div><div><strong class="font-semibold">繰り返し:</strong> ${rep[todo.repeat] || 'なし'}</div><div><strong class="font-semibold">重要度:</strong> ${imp[todo.importance] || '未設定'}</div><div><strong class="font-semibold">緊急度:</strong> ${urg[todo.urgency] || '未設定'}</div><div><strong class="font-semibold block">URL:</strong>${url}</div></div>
-            <div class="flex gap-2 mt-6">
-                <button class="modal-close-button flex-1 bg-gray-200 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">閉じる</button>
-                <button id="edit-from-detail-btn" data-id="${id}" class="flex-1 bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600">編集</button>
-            </div>`);
+            const imp = { "1": '重要', "0": '重要でない' }; const urg = { "1": '緊急', "0": '緊急でない' }; const rep = { none: 'なし', daily: '毎日', weekly: '毎週', monthly: '毎月' }; const url = todo.spreadsheet_url ? `<a href="${todo.spreadsheet_url}" target="_blank" rel="noopener noreferrer" class="text-sky-600 hover:underline break-all">${todo.spreadsheet_url}</a>` : 'なし';
+            showModal(`<div class="text-left"><h3 class="text-2xl font-bold mb-4">${todo.title}</h3><div class="space-y-3 text-gray-700"><div><strong class="font-semibold block text-sm">タスク内容:</strong><p class="whitespace-pre-wrap">${todo.content}</p></div><div><strong class="font-semibold">期限:</strong> ${formatDate(new Date(todo.deadline), true)}</div><div><strong class="font-semibold">影響:</strong> ${todo.impact || '未設定'}</div><div><strong class="font-semibold">繰り返し:</strong> ${rep[todo.repeat] || 'なし'}</div><div><strong class="font-semibold">重要度:</strong> ${imp[todo.importance] || '未設定'}</div><div><strong class="font-semibold">緊急度:</strong> ${urg[todo.urgency] || '未設定'}</div><div><strong class="font-semibold block">URL:</strong>${url}</div></div><div class="flex gap-2 mt-6"><button class="modal-close-button flex-1 bg-gray-200 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">閉じる</button><button id="edit-from-detail-btn" data-id="${id}" class="flex-1 bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600">編集</button></div>`);
         }
         function showConfirmationModal(t, x, f) { showModal(`<h3 class="text-xl font-bold mb-2">${t}</h3><p class="text-gray-600 mb-6">${x}</p><div class="flex gap-4"><button class="modal-close-button flex-1 bg-gray-200 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">キャンセル</button><button id="modal-confirm-btn" class="flex-1 bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600">削除する</button></div>`); document.getElementById('modal-confirm-btn').onclick = f; };
         function showDayTodosModal(d, ts) { const ds = `${d.getMonth() + 1}月${d.getDate()}日`; const l = ts.length > 0 ? `<ul class="space-y-2 text-left">${ts.map(t => `<li class="flex items-center gap-3 p-2 rounded-lg ${t.completed ? 'bg-gray-100' : ''}"><i class="fas ${t.completed ? 'fa-check-circle text-green-500' : 'fa-circle text-gray-300'}"></i><span class="${t.completed ? 'line-through text-gray-500' : ''}">${t.title}</span></li>`).join('')}</ul>` : `<p class="text-gray-500">この日のToDoはありません。</p>`; showModal(`<h3 class="text-xl font-bold mb-4">${ds}のToDo</h3><div class="max-h-60 overflow-y-auto pr-2">${l}</div><button class="modal-close-button mt-6 w-full bg-gray-200 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">閉じる</button>`); };
-
         function switchToEditView(id) {
-            const todo = state.todos.find(t => t.id === id);
-            if (!todo) return;
+            const todo = state.todos.find(t => t.id === id); if (!todo) return;
             closeModal();
             navigateTo('create');
             setTimeout(() => {
                 document.querySelector('#app-container h1').textContent = 'ToDoを編集';
-                document.querySelector('#create-form button[type="submit"]').textContent = '更新する';
+                document.querySelector('#submit-create-form-btn').textContent = '更新する';
                 document.getElementById('edit-todo-id').value = todo.id;
                 document.getElementById('title').value = todo.title;
                 document.getElementById('content').value = todo.content;
@@ -674,8 +634,8 @@
                 document.getElementById('spreadsheet_url').value = todo.spreadsheet_url || '';
                 document.getElementById('impact').value = todo.impact || '';
                 document.getElementById('repeat').value = todo.repeat || 'none';
-                document.getElementById('importance').value = todo.importance || '1';
-                document.getElementById('urgency').value = todo.urgency || '1';
+                document.querySelector('select[name="importance"]').value = todo.importance || '1';
+                document.querySelector('select[name="urgency"]').value = todo.urgency || '1';
                 document.getElementById('isGuardian').checked = todo.isGuardian || false;
             }, 0);
         }
