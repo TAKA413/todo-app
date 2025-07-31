@@ -1,165 +1,685 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>HOLIDAY ToDo Lite v2</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-      font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HOLIDAY ToDo (最終修正版)</title>
+    <!-- 外部ライブラリの読み込み -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <!-- このファイル内にCSSを直接記述 -->
+    <style>
+        /* ▼ 修正: Flexboxを使って、より堅牢なレイアウトに再設計 */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* ページ全体のスクロールを禁止 */
+        }
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background-color: #f9fafb;
+            color: #1f2937;
+            display: flex;
+            flex-direction: column;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #app-body {
+            flex: 1; /* 残りの高さをすべて埋める */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #app-wrapper {
+            flex: 1;
+            overflow-y: auto; /* コンテンツ部分のみスクロール可能に */
+        }
+        /* ▲ ここまでレイアウトの修正 */
 
-    main {
-      flex: 1;
-      overflow-y: auto;
-      padding: 1rem;
-    }
+        .task-item {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 1rem;
+        }
 
-    footer {
-      background-color: #fff;
-      border-top: 1px solid #ddd;
-      padding: 0.5rem;
-      display: flex;
-      justify-content: space-around;
-      position: sticky;
-      bottom: 0;
-      z-index: 10;
-    }
+        .task-item.completed .task-title {
+            text-decoration: line-through;
+            color: #9ca3af;
+        }
+        .calendar-dot {
+            width: 6px;
+            height: 6px;
+            background-color: #ef4444;
+            border-radius: 50%;
+            position: absolute;
+            bottom: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .is-today {
+            background-color: #e0f2fe;
+            color: #0ea5e9;
+            font-weight: bold;
+        }
+        .nav-button.active {
+            color: #0284c7;
+        }
+        .modal-enter-active { animation: fadeIn 0.2s ease-out; }
+        .modal-leave-active { animation: fadeOut 0.2s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes fadeOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95); } }
 
-    .hidden { display: none; }
-    .active { color: #0ea5e9; font-weight: bold; }
-    .task-done { text-decoration: line-through; color: #888; }
-  </style>
+        /* --- ガーディアンモードのスタイル --- */
+        #guardian-banner-container {
+            padding: 10px;
+            background-color: #f9fafb;
+            max-width: 100%;
+        }
+        .guardian-banner {
+            animation: pulse-bg 2s infinite;
+            padding: 0.75rem;
+        }
+        .guardian-text-flash {
+            color: #facc15;
+            font-size: 1.125rem;
+            animation: flash-yellow 1.5s infinite;
+        }
+        @keyframes flash-yellow {
+            0%, 100% { color: #facc15; opacity: 1; transform: scale(1.05); }
+            50% { color: #fde047; opacity: 0.8; transform: scale(1); }
+        }
+        .guardian-task {
+            border: 2px solid #f87171;
+            box-shadow: 0 0 15px rgba(248, 113, 113, 0.5);
+            animation: pulse-border 2s infinite;
+        }
+        @keyframes pulse-border {
+            0%, 100% { border-color: #f87171; }
+            50% { border-color: #dc2626; }
+        }
+        @keyframes pulse-bg {
+            0%, 100% { background-color: #ef4444; }
+            50% { background-color: #dc2626; }
+        }
+        
+        /* --- アイゼンハワーマトリクスのスタイル --- */
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 1rem;
+            height: 70vh;
+        }
+        .matrix-quadrant {
+            border: 2px dashed #d1d5db;
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.2s;
+        }
+        .matrix-quadrant.drag-over {
+            background-color: #e0f2fe;
+            border-style: solid;
+        }
+        .matrix-quadrant h3 {
+            font-size: 0.875rem;
+            font-weight: bold;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+        .matrix-tasks {
+            overflow-y: auto;
+            flex-grow: 1;
+            min-height: 50px;
+        }
+        .matrix-task {
+            background-color: white;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            cursor: grab;
+        }
+        .matrix-task.dragging {
+            opacity: 0.5;
+        }
+    </style>
 </head>
 <body>
-  <main>
-    <section id="list-view">
-      <h1 class="text-xl font-bold mb-4">HOLIDAY ToDo</h1>
-      <ul id="todo-list" class="space-y-2"></ul>
-    </section>
 
-    <section id="create-view" class="hidden">
-      <h1 class="text-xl font-bold mb-4">タスク作成</h1>
-      <form id="todo-form" class="space-y-4">
-        <input type="text" id="todo-title" placeholder="件名" required class="w-full border rounded p-2" />
-        <textarea id="todo-content" placeholder="内容" required class="w-full border rounded p-2"></textarea>
-        <input type="datetime-local" id="todo-deadline" required class="w-full border rounded p-2" />
-        <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded">保存</button>
-      </form>
-    </section>
+    <div id="app-body">
+        <div id="guardian-banner-container"></div>
+        <div id="app-wrapper">
+            <div id="app-container" class="max-w-2xl mx-auto p-4"></div>
+        </div>
+    </div>
+    
+    <footer class="bg-white border-t border-gray-200 shadow-t-sm">
+        <nav class="max-w-2xl mx-auto flex justify-around">
+            <button data-view="list" class="nav-button active flex-1 py-3 text-center"><i class="fas fa-list-ul fa-lg"></i><span class="block text-xs font-medium">メイン</span></button>
+            <button data-view="matrix" class="nav-button flex-1 py-3 text-center text-gray-500"><i class="fas fa-th-large fa-lg"></i><span class="block text-xs font-medium">マトリクス</span></button>
+            <button data-view="create" class="nav-button flex-1 py-3 text-center text-gray-500"><i class="fas fa-plus-square fa-lg"></i><span class="block text-xs font-medium">新規作成</span></button>
+            <button data-view="account" class="nav-button flex-1 py-3 text-center text-gray-500"><i class="fas fa-user-circle fa-lg"></i><span class="block text-xs font-medium">アカウント</span></button>
+        </nav>
+    </footer>
 
-    <section id="matrix-view" class="hidden">
-      <h1 class="text-xl font-bold mb-4">優先順位マトリクス</h1>
-      <p class="text-gray-500">※ この画面は開発中です。</p>
-    </section>
+    <!-- モーダル表示エリア -->
+    <div id="modal-backdrop" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+        <div id="modal-content" class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center transform"></div>
+    </div>
 
-    <section id="account-view" class="hidden">
-      <h1 class="text-xl font-bold mb-4">アカウント</h1>
-      <button id="clear-all" class="w-full bg-red-500 text-white p-2 rounded">全データ削除</button>
-    </section>
-  </main>
+    <script type="module">
+        // --- 状態管理 ---
+        const state = {
+            todos: [],
+            currentFilter: 'all',
+            currentDate: new Date(),
+            consecutiveOverdue: 0,
+        };
 
-  <footer>
-    <button class="nav-btn active" data-target="list-view">メイン</button>
-    <button class="nav-btn" data-target="create-view">作成</button>
-    <button class="nav-btn" data-target="matrix-view">マトリクス</button>
-    <button class="nav-btn" data-target="account-view">アカウント</button>
-  </footer>
+        // --- メッセージ集 (変更なし) ---
+        const messages = {
+            reward: ["お疲れ様！これで心置きなくおやつが食べられますね！", "タスク完了！あなたは天才ですか？いいえ、努力の天才です。", "素晴らしい！その調子で次のご褒美もゲットだ！", "完了！まるでゲームのクエストをクリアした気分！", "お見事！脳内にドーパミンが溢れ出ているはず！", "一つ完了、一つ成長。未来のあなたに感謝されるでしょう。", "完璧です！今日は枕を高くして眠れますね。", "任務完了！自分を褒めてあげましょう。ビールがうまい！", "ナイス！ToDoリストが軽くなると心も軽くなる！", "やりましたね！その達成感、噛しめてください。", "完了おめでとう！あなたは自分の人生のキャプテンです。", "あなたの集中力に乾杯！", "このタスク、もはやあなたの伝説の一部です。", "やるべきことが片付くと、世界が輝いて見えませんか？", "OK、Google。今日の私、最高。", "一歩一歩が、大きな未来へ繋がっています。", "完了ボタンを押す、その瞬間がたまらない！", "よく頑張りました！ご褒美に好きな曲でも聴きますか？", "これで安心して次の沼にハマれますね。", "さすが！デキる人は違いますね！"],
+            gentle: ["お疲れ様です。期限は過ぎちゃったけど、完了できてえらい！", "大丈夫、誰にでもそういう日はあります。まずは一つ完了！", "完了おめでとう！次はもう少しだけ早めにトライしてみましょうか。", "気にしないで！終わらせたことが一番大事です。", "セーフ！…とは言えないけど、よく頑張りました！", "期限はあくまで目安。あなたのペースで大丈夫ですよ。", "一つクリア！遅れても、やらないよりずっといい。", "ドンマイ！この経験を次に活かしましょう。", "焦らなくても大丈夫。あなたの頑張り、ちゃんと見てますよ。", "間に合わなかったけど、最後までやり遂げたあなたを尊敬します。"],
+            strict: ["また期限過ぎてますよ。そろそろ本気出しませんか？", "３回目ですね。このタスク、本当にやる気ありますか？", "「後でやろう」は「やらない」の仲間です。自覚してください。", "警告です。計画性という言葉、辞書で引いてみては？", "あなたの「締め切り」は、ただの「希望日」ですか？", "このままでは、ただの「やるやる詐欺」ですよ。", "未来の自分に謝りましょう。今のあなたのせいで苦労するのですから。", "カレンダー、見てますか？時計、動いてますか？", "うーん、この調子だと信頼を失いますよ。まずは自分からの。", "厳しいことを言いますが、これが現実です。次はありませんよ。"]
+        };
 
-  <script>
-    const todos = JSON.parse(localStorage.getItem("todos") || "[]");
-    const listEl = document.getElementById("todo-list");
-    const form = document.getElementById("todo-form");
-    const views = ["list-view", "create-view", "matrix-view", "account-view"];
+        // --- HTMLテンプレート ---
+        const templates = {
+            list: `
+                <h1 class="text-3xl font-bold text-gray-800 mb-4 text-center">HOLIDAY ToDo</h1>
+                <div class="flex justify-center gap-2 mb-4">
+                    <button id="morning-briefing-btn" class="bg-sky-100 text-sky-700 text-sm font-semibold px-4 py-2 rounded-full hover:bg-sky-200 transition-colors"><i class="fas fa-sun mr-2"></i>今日の確認</button>
+                    <button id="tomorrow-briefing-btn" class="bg-indigo-100 text-indigo-700 text-sm font-semibold px-4 py-2 rounded-full hover:bg-indigo-200 transition-colors"><i class="fas fa-moon mr-2"></i>明日の準備</button>
+                </div>
+                <div class="mb-4 border-b border-gray-200">
+                    <nav class="flex -mb-px space-x-6" id="todo-tabs">
+                        <button data-filter="all" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-sky-600 border-sky-500">全て</button>
+                        <button data-filter="today" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 border-transparent">今日</button>
+                        <button data-filter="tomorrow" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 border-transparent">明日</button>
+                        <button data-filter="week" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 border-transparent">1週間</button>
+                    </nav>
+                </div>
+                <ul id="todo-list" class="space-y-3"></ul>
+                <div id="calendar-container" class="mt-8 bg-white p-4 rounded-xl shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <button id="prev-month" class="p-2 rounded-full hover:bg-gray-100"><i class="fas fa-chevron-left text-gray-600"></i></button>
+                        <h2 id="calendar-header" class="text-lg font-semibold"></h2>
+                        <button id="next-month" class="p-2 rounded-full hover:bg-gray-100"><i class="fas fa-chevron-right text-gray-600"></i></button>
+                    </div>
+                    <div id="calendar-grid" class="grid grid-cols-7 gap-1 text-center text-sm"></div>
+                </div>`,
+            create: `
+                <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">新しいToDo</h1>
+                <form id="create-form" class="space-y-6 bg-white p-6 rounded-xl shadow-sm">
+                    <input type="hidden" id="edit-todo-id" name="id">
+                    <div>
+                        <label for="title" class="block text-sm font-medium text-gray-700 mb-1">件名 / トークルーム名</label>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="title" name="title" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-sky-500 focus:border-sky-500">
+                            <button type="button" id="ai-subtask-btn" class="bg-purple-500 text-white px-3 py-2 rounded-lg hover:bg-purple-600" title="AIでタスクを分解"><i class="fas fa-magic"></i></button>
+                        </div>
+                    </div>
+                    <div><label for="content" class="block text-sm font-medium text-gray-700 mb-1">タスク内容</label><textarea id="content" name="content" rows="4" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-sky-500 focus:border-sky-500"></textarea></div>
+                    <div><label for="deadline" class="block text-sm font-medium text-gray-700 mb-1">期限</label><input type="datetime-local" id="deadline" name="deadline" required step="900" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-sky-500 focus:border-sky-500"></div>
+                    <div><label for="spreadsheet_url" class="block text-sm font-medium text-gray-700 mb-1">スプレッドシートURL（任意）</label><input type="url" id="spreadsheet_url" name="spreadsheet_url" placeholder="https://docs.google.com/..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-sky-500 focus:border-sky-500"></div>
+                    <div><label for="impact" class="block text-sm font-medium text-gray-700 mb-1">このタスクの影響（忘れるとどうなる？）</label><input type="text" id="impact" name="impact" required placeholder="例：クライアントの信用を失う" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-sky-500 focus:border-sky-500"></div>
+                    <div>
+                        <label for="repeat" class="block text-sm font-medium text-gray-700 mb-1">繰り返し設定</label>
+                        <select id="repeat" name="repeat" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-sky-500 focus:border-sky-500 bg-white" required>
+                            <option value="none">なし</option>
+                            <option value="daily">毎日</option>
+                            <option value="weekly">毎週</option>
+                            <option value="monthly">毎月</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">重要度</label>
+                            <select name="importance" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-sky-500 focus:border-sky-500 bg-white" required>
+                                <option value="1">重要</option>
+                                <option value="0">重要でない</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">緊急度</label>
+                            <select name="urgency" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-sky-500 focus:border-sky-500 bg-white" required>
+                                <option value="1">緊急</option>
+                                <option value="0">緊急でない</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between bg-red-50 p-3 rounded-lg">
+                        <div>
+                            <label for="isGuardian" class="font-medium text-red-800">ガーディアンモード</label>
+                            <p class="text-xs text-red-600">絶対に忘れたくないタスクに設定</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="isGuardian" name="isGuardian" value="true" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-red-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                        </label>
+                    </div>
+                    <button type="submit" class="w-full bg-sky-500 text-white font-semibold py-3 px-4 rounded-lg hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors">作成する</button>
+                </form>`,
+            matrix: `
+                <h1 class="text-3xl font-bold text-gray-800 mb-4 text-center">優先順位を確認</h1>
+                <div class="matrix-grid">
+                    <div id="q1" class="matrix-quadrant bg-red-50" data-importance="1" data-urgency="1">
+                        <h3>重要かつ緊急</h3>
+                        <div class="matrix-tasks"></div>
+                    </div>
+                    <div id="q2" class="matrix-quadrant bg-sky-50" data-importance="1" data-urgency="0">
+                        <h3>重要だが緊急でない</h3>
+                        <div class="matrix-tasks"></div>
+                    </div>
+                    <div id="q3" class="matrix-quadrant bg-yellow-50" data-importance="0" data-urgency="1">
+                        <h3>重要でないが緊急</h3>
+                        <div class="matrix-tasks"></div>
+                    </div>
+                    <div id="q4" class="matrix-quadrant bg-gray-100" data-importance="0" data-urgency="0">
+                        <h3>重要でも緊急でもない</h3>
+                        <div class="matrix-tasks"></div>
+                    </div>
+                </div>`,
+            account: `
+                <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">アカウント</h1>
+                <div class="bg-white p-6 rounded-xl shadow-sm space-y-6">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2 text-center">ログイン機能</h3>
+                        <p class="text-gray-600 text-center text-sm mb-4">この機能は現在開発中です。<br>将来的にはFirebaseと連携し、複数デバイスでのデータ同期が可能になります。</p>
+                        <input type="email" placeholder="メールアドレス" class="w-full mb-2 px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" disabled>
+                        <input type="password" placeholder="パスワード" class="w-full mb-4 px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" disabled>
+                        <button class="w-full bg-gray-300 text-gray-500 font-semibold py-2 px-4 rounded-lg cursor-not-allowed">ログイン (準備中)</button>
+                    </div>
+                    <hr>
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2 text-center">データ管理</h3>
+                        <p class="text-sm text-gray-500 mb-4 text-center">データは現在、お使いのブラウザに保存されています。</p>
+                        <button id="delete-all-data" class="w-full bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors">全データを削除する</button>
+                    </div>
+                </div>`
+        };
 
-    function saveTodos() {
-      localStorage.setItem("todos", JSON.stringify(todos));
-    }
+        // --- DOM要素 ---
+        const appContainer = document.getElementById('app-container');
+        const modalBackdrop = document.getElementById('modal-backdrop');
+        const modalContent = document.getElementById('modal-content');
+        const guardianBannerContainer = document.getElementById('guardian-banner-container');
 
-    function renderTodos() {
-      listEl.innerHTML = "";
-      if (todos.length === 0) {
-        listEl.innerHTML = "<li class='text-gray-500 text-center'>タスクはまだありません。</li>";
-        return;
-      }
-      todos.sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
-      todos.forEach((t, i) => {
-        const li = document.createElement("li");
-        li.className = "bg-white p-3 rounded shadow flex justify-between items-center";
-        li.innerHTML = `
-          <div>
-            <input type="checkbox" ${t.done ? "checked" : ""} data-id="${i}" class="mr-2" />
-            <span class="${t.done ? 'task-done' : ''}">${t.title}</span>
-            <div class="text-xs text-gray-500">${new Date(t.deadline).toLocaleString()}</div>
-          </div>
-          <button data-del="${i}" class="text-red-500 font-bold">×</button>
-        `;
-        listEl.appendChild(li);
-      });
-
-      listEl.querySelectorAll("input[type='checkbox']").forEach(cb => {
-        cb.addEventListener("change", e => {
-          const id = e.target.dataset.id;
-          todos[id].done = e.target.checked;
-          saveTodos();
-          renderTodos();
+        // --- 初期化処理 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadState();
+            navigateTo('list');
+            addEventListeners();
         });
-      });
 
-      listEl.querySelectorAll("button[data-del]").forEach(btn => {
-        btn.addEventListener("click", e => {
-          const id = e.target.dataset.del;
-          todos.splice(id, 1);
-          saveTodos();
-          renderTodos();
-        });
-      });
-    }
+        // --- イベントリスナー設定 ---
+        function addEventListeners() {
+            document.querySelector('footer').addEventListener('click', (e) => {
+                const navButton = e.target.closest('.nav-button');
+                if (navButton) navigateTo(navButton.dataset.view);
+            });
+            modalBackdrop.addEventListener('click', (e) => {
+                const target = e.target;
+                if (target === modalBackdrop || target.closest('.modal-close-button')) {
+                    closeModal();
+                }
+                if (target.closest('#edit-from-detail-btn')) {
+                    switchToEditView(target.closest('#edit-from-detail-btn').dataset.id);
+                }
+            });
+            // ▼ 修正: イベントリスナーの対象を appContainer から document に変更
+            document.addEventListener('click', handleAppContainerClick);
+            document.addEventListener('submit', handleFormSubmit);
+            document.addEventListener('dragstart', handleDragStart);
+            document.addEventListener('dragover', handleDragOver);
+            document.addEventListener('dragleave', handleDragLeave);
+            document.addEventListener('drop', handleDrop);
+        }
 
-    form.addEventListener("submit", e => {
-      e.preventDefault();
-      const newTodo = {
-        title: document.getElementById("todo-title").value,
-        content: document.getElementById("todo-content").value,
-        deadline: document.getElementById("todo-deadline").value,
-        done: false
-      };
-      todos.push(newTodo);
-      saveTodos();
-      form.reset();
-      switchView("list-view");
-      renderTodos();
-    });
+        function handleAppContainerClick(e) {
+            const target = e.target;
+            if (target.closest('#todo-tabs')) handleTabClick(e);
+            if (target.closest('#todo-list')) handleListClick(e);
+            if (target.closest('#prev-month')) changeMonth(-1);
+            if (target.closest('#next-month')) changeMonth(1);
+            if (target.closest('#calendar-grid button')) handleCalendarDayClick(e);
+            if (target.closest('#delete-all-data')) handleDeleteAllData();
+            if (target.closest('#ai-subtask-btn')) generateSubtasks();
+            if (target.closest('#morning-briefing-btn')) getMorningBriefing();
+            if (target.closest('#tomorrow-briefing-btn')) getTomorrowBriefing();
+            if (target.closest('.matrix-task')) showDetailModal(target.closest('.matrix-task').dataset.id);
+        }
 
-    document.querySelectorAll(".nav-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        switchView(btn.dataset.target);
-        document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-      });
-    });
+        function handleFormSubmit(e) {
+            if (e.target.id === 'create-form') {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const todoId = formData.get('id');
 
-    function switchView(targetId) {
-      views.forEach(v => {
-        document.getElementById(v).classList.toggle("hidden", v !== targetId);
-      });
-    }
+                const todoData = {
+                    title: formData.get('title'),
+                    content: formData.get('content'),
+                    deadline: formData.get('deadline'),
+                    spreadsheet_url: formData.get('spreadsheet_url'),
+                    impact: formData.get('impact'),
+                    repeat: formData.get('repeat'),
+                    importance: formData.get('importance'),
+                    urgency: formData.get('urgency'),
+                    isGuardian: formData.has('isGuardian'),
+                };
 
-    document.getElementById("clear-all").addEventListener("click", () => {
-      if (confirm("本当にすべて削除しますか？")) {
-        todos.length = 0;
-        saveTodos();
-        renderTodos();
-      }
-    });
+                loadState(); 
 
-    renderTodos();
-  </script>
+                if (todoId) {
+                    const index = state.todos.findIndex(t => t.id === todoId);
+                    if (index !== -1) {
+                        state.todos[index] = { ...state.todos[index], ...todoData };
+                    }
+                } else {
+                    todoData.id = Date.now().toString();
+                    todoData.completed = false;
+                    state.todos.push(todoData);
+                }
+                
+                state.currentFilter = 'all';
+                saveState();
+                navigateTo('list');
+            }
+        }
+
+        // --- ナビゲーション ---
+        function navigateTo(view) {
+            appContainer.innerHTML = templates[view];
+            document.querySelectorAll('.nav-button').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.view === view);
+                btn.classList.toggle('text-gray-500', btn.dataset.view !== view);
+            });
+            if (view === 'list') {
+                renderTodoList();
+                renderCalendar();
+            } else if (view === 'create') {
+                const deadlineInput = document.getElementById('deadline');
+                const now = new Date();
+                now.setMinutes(Math.ceil(now.getMinutes() / 15) * 15 - now.getTimezoneOffset());
+                deadlineInput.value = now.toISOString().slice(0, 16);
+            } else if (view === 'matrix') {
+                renderMatrixView();
+            }
+            updateGuardianBanner();
+        }
+
+        // --- データ永続化 ---
+        function saveState() {
+             localStorage.setItem('holiday-todos', JSON.stringify(state.todos));
+             localStorage.setItem('holiday-consecutive-overdue', state.consecutiveOverdue);
+        };
+        function loadState() {
+            try {
+                const t = localStorage.getItem('holiday-todos');
+                state.todos = t ? JSON.parse(t) : [];
+                state.consecutiveOverdue = parseInt(localStorage.getItem('holiday-consecutive-overdue') || '0', 10);
+            } catch (e) {
+                state.todos = [];
+                state.consecutiveOverdue = 0;
+            }
+        };
+
+        // --- カレンダー関連 (変更なし) ---
+        function renderCalendar() { const h = document.getElementById('calendar-header'), g = document.getElementById('calendar-grid'); if (!h || !g) return; const { year: y, month: m } = { year: state.currentDate.getFullYear(), month: state.currentDate.getMonth() }; h.textContent = `${y}年 ${m + 1}月`; g.innerHTML = ''; ['日', '月', '火', '水', '木', '金', '土'].forEach(d => g.innerHTML += `<div class="font-semibold text-gray-600 text-xs">${d}</div>`); const f = new Date(y, m, 1).getDay(); for (let i = 0; i < f; i++) g.appendChild(document.createElement('div')); const ds = new Date(y, m + 1, 0).getDate(); const t = new Date().setHours(0, 0, 0, 0); for (let i = 1; i <= ds; i++) { const e = document.createElement('button'); const d = new Date(y, m, i); e.className = 'relative p-2 rounded-full hover:bg-gray-100 transition-colors'; e.textContent = i; if (d.setHours(0, 0, 0, 0) === t) e.classList.add('is-today'); const ht = state.todos.some(td => { const dt = new Date(td.deadline); return dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === i; }); if (ht) e.innerHTML += '<div class="calendar-dot"></div>'; g.appendChild(e); } };
+        function changeMonth(offset) { state.currentDate.setMonth(state.currentDate.getMonth() + offset); renderCalendar(); };
+        function handleCalendarDayClick(e) { const b = e.target.closest('button'); if (!b || !b.textContent) return; const day = parseInt(b.textContent, 10); const d = new Date(state.currentDate.getFullYear(), state.currentDate.getMonth(), day); const s = new Date(d.getFullYear(), d.getMonth(), d.getDate()); const ed = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59); const tds = state.todos.filter(t => { const dt = new Date(t.deadline); return dt >= s && dt <= ed; }); showDayTodosModal(s, tds); };
+
+        // --- ToDoリスト関連 ---
+        function renderTodoList() {
+            const todoList = document.getElementById('todo-list');
+            if (!todoList) return;
+            const filteredTodos = getFilteredTodos();
+            todoList.innerHTML = '';
+            if (filteredTodos.length === 0 && state.currentFilter !== 'all') {
+                todoList.innerHTML = `<li class="text-center text-gray-500 py-8"><i class="fas fa-check-circle fa-2x mb-2"></i><p>この期間のタスクはありません！</p></li>`;
+                return;
+            }
+             if (state.todos.length === 0) {
+                todoList.innerHTML = `<li class="text-center text-gray-500 py-8"><i class="fas fa-coffee fa-2x mb-2"></i><p>タスクはまだありません。<br>最初のタスクを追加しましょう！</p></li>`;
+                return;
+            }
+            const sortedTodos = [...filteredTodos].sort((a, b) => a.completed - b.completed || (b.isGuardian ? 1 : 0) - (a.isGuardian ? 1 : 0));
+            sortedTodos.forEach(todo => {
+                const li = document.createElement('li');
+                li.className = `task-item bg-white p-4 rounded-xl shadow-sm ${todo.completed ? 'completed' : ''} ${todo.isGuardian && !todo.completed ? 'guardian-task' : ''}`;
+                li.dataset.id = todo.id;
+                const deadline = new Date(todo.deadline);
+                const isOverdue = !todo.completed && new Date() > deadline;
+                const pColors = { "11": 'border-red-500', "10": 'border-sky-500', "01": 'border-yellow-500', "00": 'border-gray-400' };
+                const importanceKey = `${todo.importance || 0}${todo.urgency || 0}`;
+                li.innerHTML = `<div><input type="checkbox" ${todo.completed ? 'checked' : ''} class="h-6 w-6 rounded border-gray-300 text-sky-600 focus:ring-sky-500 cursor-pointer"></div><div class="task-title-container cursor-pointer flex-grow min-w-0"><p class="task-title font-medium truncate">${todo.isGuardian ? '<i class="fas fa-shield-alt text-red-500 mr-2"></i>' : ''}${todo.title}</p><div class="flex items-center text-xs text-gray-500 mt-1"><i class="far fa-clock mr-1 ${isOverdue ? 'text-red-500' : ''}"></i><span class="${isOverdue ? 'text-red-500 font-semibold' : ''}">${formatDate(deadline)}</span></div></div><div class="flex items-center"><div class="w-1 h-6 rounded-full ${pColors[importanceKey]} border-l-4 mr-4"></div><button class="delete-button text-gray-400 hover:text-red-500 p-2 rounded-full transition-colors"><i class="fas fa-trash-alt"></i></button></div>`;
+                todoList.appendChild(li);
+            });
+        }
+        
+        function handleListClick(e) { const i = e.target.closest('.task-item'); if (!i) return; const id = i.dataset.id; if (e.target.type === 'checkbox') toggleTodoCompletion(id, e.target.checked); else if (e.target.closest('.delete-button')) deleteTodo(id); else if (e.target.closest('.task-title-container')) showDetailModal(id); };
+        
+        function toggleTodoCompletion(id, isCompleted) {
+            const todo = state.todos.find(t => t.id === id); 
+            if (!todo) return;
+            
+            todo.completed = isCompleted;
+
+            if (isCompleted) {
+                const isOverdue = new Date() > new Date(todo.deadline);
+                let messageType;
+                if (isOverdue) {
+                    state.consecutiveOverdue++;
+                    messageType = state.consecutiveOverdue >= 3 ? 'strict' : 'gentle';
+                } else {
+                    state.consecutiveOverdue = 0;
+                    messageType = 'reward';
+                }
+                showCompletionModal(messageType);
+            }
+            
+            saveState();
+            renderTodoList();
+            renderCalendar();
+            updateGuardianBanner();
+        }
+
+        function deleteTodo(id) {
+            state.todos = state.todos.filter(t => t.id !== id);
+            saveState();
+            renderTodoList();
+            renderCalendar();
+            updateGuardianBanner();
+        }
+
+        function handleTabClick(e) { if (e.target.matches('.tab-button')) { state.currentFilter = e.target.dataset.filter; document.querySelectorAll('.tab-button').forEach(b => { b.classList.remove('text-sky-600', 'border-sky-500'); b.classList.add('text-gray-500', 'border-transparent'); }); e.target.classList.add('text-sky-600', 'border-sky-500'); renderTodoList(); } };
+        
+        function getFilteredTodos() {
+            if (state.currentFilter === 'all') return state.todos;
+            const now = new Date();
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            let startDate, endDate;
+            if (state.currentFilter === 'today') {
+                startDate = startOfToday;
+                endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+            } else if (state.currentFilter === 'tomorrow') {
+                startDate = new Date(startOfToday.getTime() + 24 * 3600 * 1000);
+                endDate = new Date(startDate.getTime() + (24 * 3600 * 1000 - 1));
+            } else if (state.currentFilter === 'week') {
+                startDate = startOfToday;
+                endDate = new Date(startOfToday.getTime() + (7 * 24 * 3600 * 1000 - 1));
+            } else { return state.todos; }
+            return state.todos.filter(t => { const d = new Date(t.deadline); return d >= startDate && d <= endDate; });
+        }
+        function handleDeleteAllData() { showConfirmationModal('本当にすべてのデータを削除しますか？', 'この操作は元に戻せません。', () => { state.todos = []; state.consecutiveOverdue = 0; saveState(); closeModal(); navigateTo('list'); }); };
+
+        // --- アイゼンハワーマトリクス描画 ---
+        function renderMatrixView() {
+            const quadrants = {
+                q1: document.querySelector('#q1 .matrix-tasks'),
+                q2: document.querySelector('#q2 .matrix-tasks'),
+                q3: document.querySelector('#q3 .matrix-tasks'),
+                q4: document.querySelector('#q4 .matrix-tasks'),
+            };
+            Object.values(quadrants).forEach(q => q.innerHTML = '');
+            const uncompletedTodos = state.todos.filter(t => !t.completed);
+            const sortedTodos = uncompletedTodos.sort((a,b) => new Date(a.deadline) - new Date(b.deadline));
+            sortedTodos.forEach(todo => {
+                const taskEl = document.createElement('div');
+                taskEl.className = 'matrix-task';
+                taskEl.textContent = todo.title;
+                taskEl.dataset.id = todo.id;
+                taskEl.draggable = true;
+                if (todo.importance === '1' && todo.urgency === '1') quadrants.q1.appendChild(taskEl);
+                else if (todo.importance === '1' && todo.urgency === '0') quadrants.q2.appendChild(taskEl);
+                else if (todo.importance === '0' && todo.urgency === '1') quadrants.q3.appendChild(taskEl);
+                else quadrants.q4.appendChild(taskEl);
+            });
+        }
+
+        // --- ガーディアンモード関連 ---
+        function updateGuardianBanner() {
+            guardianBannerContainer.innerHTML = '';
+            const guardianTasks = state.todos.filter(t => t.isGuardian && !t.completed);
+            guardianTasks.forEach(task => {
+                const banner = document.createElement('div');
+                banner.className = 'guardian-banner bg-red-500 text-white p-4 text-center font-bold shadow-lg z-20 flex items-center justify-center mb-1';
+                banner.innerHTML = `<i class="fas fa-exclamation-triangle mr-3 text-2xl"></i><span class="guardian-text-flash">最重要タスク「${task.title}」が未完了です！</span>`;
+                guardianBannerContainer.appendChild(banner);
+            });
+            updateBodyPadding();
+        }
+        function updateBodyPadding() {
+            const wrapper = document.getElementById('app-wrapper');
+            if (wrapper) {
+                const totalBannerHeight = guardianBannerContainer.offsetHeight;
+                wrapper.style.paddingTop = `${totalBannerHeight}px`;
+            }
+        }
+
+        // --- AI機能関連 ---
+        async function getTomorrowBriefing() {
+            const tomorrowTodos = getFilteredTodosForBriefing('tomorrow');
+            if (tomorrowTodos.length === 0) {
+                showModal(`<p>お疲れ様です！<br>明日のタスクはまだありません。今夜はゆっくり休みましょう。</p><button class="modal-close-button mt-4 bg-gray-200 py-2 px-4 rounded-lg">OK</button>`);
+                return;
+            }
+            const prompt = `あなたは親切なアシスタントです。ユーザーに夜の挨拶をし、明日のタスクリストを元に、心の準備ができるようなブリーフィングをしてください。特に重要なタスクを指摘し、良い一日のスタートが切れるように励ましてください。フレンドリーな口調でお願いします。\n\n明日のタスク:\n${tomorrowTodos.map(t => `- ${t.title} (重要度:${t.importance === '1' ? '高' : '低'}, 緊急度:${t.urgency === '1' ? '高' : '低'})`).join('\n')}`;
+            showLoadingModal("AIが明日の準備をお手伝い中...");
+            try {
+                const resultText = await callGemini(prompt);
+                showModal(`<div class="text-left whitespace-pre-wrap">${resultText}</div><button class="modal-close-button mt-4 w-full bg-indigo-500 text-white py-2 px-4 rounded-lg">ありがとう！</button>`);
+            } catch (error) {
+                showModal(`<p class="text-red-500">ブリーフィングの生成に失敗しました。</p><button class="modal-close-button mt-4 bg-gray-200 py-2 px-4 rounded-lg">OK</button>`);
+            }
+        }
+        function getFilteredTodosForBriefing(filter) {
+            const now = new Date();
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            if (filter === 'today') {
+                const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+                return state.todos.filter(t => { const d = new Date(t.deadline); return d >= startOfToday && d <= endOfToday; });
+            }
+            if (filter === 'tomorrow') {
+                const startOfTomorrow = new Date(startOfToday.getTime() + 24 * 3600 * 1000);
+                const endOfTomorrow = new Date(startOfTomorrow.getTime() + (24 * 3600 * 1000 - 1));
+                return state.todos.filter(t => { const d = new Date(t.deadline); return d >= startOfTomorrow && d <= endOfTomorrow; });
+            }
+            return [];
+        }
+        async function generateSubtasks() { const t = document.getElementById('title'), c = document.getElementById('content'), b = document.getElementById('ai-subtask-btn'); if (!t.value) { showModal(`<p class="text-red-500">先に件名を入力してください。</p><button class="modal-close-button mt-4 bg-gray-200 py-2 px-4 rounded-lg">OK</button>`); return; } b.disabled = true; b.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`; const p = `あなたは優秀なプロジェクトマネージャーです。以下のタスクを、具体的な行動ステップに分解してください。箇条書き(- )で、簡潔にお願いします。\n\nタスク: ${t.value}`; try { const rt = await callGemini(p); c.value = rt; } catch (e) { console.error("AI Subtask Error:", e); showModal(`<p class="text-red-500">AIによる分解に失敗しました。時間をおいて再試行してください。</p><button class="modal-close-button mt-4 bg-gray-200 py-2 px-4 rounded-lg">OK</button>`); } finally { b.disabled = false; b.innerHTML = `<i class="fas fa-magic"></i>`; } }
+        async function getMorningBriefing() { const tt = getFilteredTodosForBriefing('today'); if (tt.length === 0) { showModal(`<p>おはようございます！<br>今日やるべきタスクはまだありません。新しい一日を始めましょう！</p><button class="modal-close-button mt-4 bg-gray-200 py-2 px-4 rounded-lg">OK</button>`); return; } const p = `あなたは親切なアシスタントです。ユーザーに朝の挨拶をし、今日のタスクリストを元に、やる気を引き出すようなポジティブなブリーフィングをしてください。タスクの重要度も考慮し、何から手をつけるべきかアドバイスもお願いします。フレンドリーな口調でお願いします。\n\n今日のタスク:\n${tt.map(t => `- ${t.title} (重要度:${t.importance === '1' ? '高' : '低'}, 緊急度:${t.urgency === '1' ? '高' : '低'})`).join('\n')}`; showLoadingModal("AIが朝のブリーフィングを準備中..."); try { const rt = await callGemini(p); showModal(`<div class="text-left whitespace-pre-wrap">${rt}</div><button class="modal-close-button mt-4 w-full bg-sky-500 text-white py-2 px-4 rounded-lg">今日も頑張る！</button>`); } catch (e) { showModal(`<p class="text-red-500">ブリーフィングの生成に失敗しました。</p><button class="modal-close-button mt-4 bg-gray-200 py-2 px-4 rounded-lg">OK</button>`); } }
+        async function callGemini(prompt) { const apiKey = ""; const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`; const payload = { contents: [{ parts: [{ text: prompt }] }] }; const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) { throw new Error(`API request failed with status ${response.status}`); } const result = await response.json(); if (result.candidates && result.candidates.length > 0) { return result.candidates[0].content.parts[0].text; } else { throw new Error("No content received from API"); } }
+
+        // --- ドラッグ＆ドロップ関連 ---
+        function handleDragStart(e) {
+            if (e.target.classList.contains('matrix-task')) {
+                e.target.classList.add('dragging');
+                e.dataTransfer.setData('text/plain', e.target.dataset.id);
+                e.dataTransfer.effectAllowed = 'move';
+            }
+        }
+        function handleDragOver(e) {
+            e.preventDefault();
+            const quadrant = e.target.closest('.matrix-quadrant');
+            if (quadrant) {
+                quadrant.classList.add('drag-over');
+                e.dataTransfer.dropEffect = 'move';
+            }
+        }
+        function handleDragLeave(e) {
+            const quadrant = e.target.closest('.matrix-quadrant');
+            if (quadrant) {
+                quadrant.classList.remove('drag-over');
+            }
+        }
+        function handleDrop(e) {
+            e.preventDefault();
+            const quadrant = e.target.closest('.matrix-quadrant');
+            if (quadrant) {
+                quadrant.classList.remove('drag-over');
+                const todoId = e.dataTransfer.getData('text/plain');
+                const todo = state.todos.find(t => t.id === todoId);
+                if (todo) {
+                    todo.importance = quadrant.dataset.importance;
+                    todo.urgency = quadrant.dataset.urgency;
+                    saveState();
+                    renderMatrixView();
+                }
+            }
+            document.querySelector('.dragging')?.classList.remove('dragging');
+        }
+
+        // --- モーダルと編集機能 ---
+        function showModal(c) { modalContent.innerHTML = c; modalBackdrop.classList.remove('hidden'); modalBackdrop.classList.add('flex'); modalContent.classList.add('modal-enter-active'); setTimeout(() => modalContent.classList.remove('modal-enter-active'), 200); };
+        function closeModal() { modalContent.classList.add('modal-leave-active'); setTimeout(() => { modalBackdrop.classList.add('hidden'); modalBackdrop.classList.remove('flex'); modalContent.classList.remove('modal-leave-active'); }, 200); };
+        function showLoadingModal(text) { showModal(`<div class="flex items-center justify-center"><i class="fas fa-spinner fa-spin mr-3"></i><p>${text}</p></div>`); }
+        function showCompletionModal(t) { const m = messages[t][Math.floor(Math.random() * messages[t].length)]; const i = t === 'reward' ? '🎉' : (t === 'gentle' ? '😊' : '😤'); showModal(`<div class="text-5xl mb-4">${i}</div><h3 class="text-xl font-bold mb-2">${t === 'reward' ? 'タスク完了！' : 'お疲れ様です！'}</h3><p class="text-gray-600 mb-6">${m}</p><button class="modal-close-button w-full bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600">閉じる</button>`); };
+        function showDetailModal(id) {
+            const todo = state.todos.find(t => t.id === id); if (!todo) return;
+            const imp = { "1": '重要', "0": '重要でない' }; const urg = { "1": '緊急', "0": '緊急でない' };
+            const rep = { none: 'なし', daily: '毎日', weekly: '毎週', monthly: '毎月' };
+            const url = todo.spreadsheet_url ? `<a href="${todo.spreadsheet_url}" target="_blank" rel="noopener noreferrer" class="text-sky-600 hover:underline break-all">${todo.spreadsheet_url}</a>` : 'なし';
+            showModal(`<div class="text-left"><h3 class="text-2xl font-bold mb-4">${todo.title}</h3><div class="space-y-3 text-gray-700"><div><strong class="font-semibold block text-sm">タスク内容:</strong><p class="whitespace-pre-wrap">${todo.content}</p></div><div><strong class="font-semibold">期限:</strong> ${formatDate(new Date(todo.deadline), true)}</div><div><strong class="font-semibold">影響:</strong> ${todo.impact || '未設定'}</div><div><strong class="font-semibold">繰り返し:</strong> ${rep[todo.repeat] || 'なし'}</div><div><strong class="font-semibold">重要度:</strong> ${imp[todo.importance] || '未設定'}</div><div><strong class="font-semibold">緊急度:</strong> ${urg[todo.urgency] || '未設定'}</div><div><strong class="font-semibold block">URL:</strong>${url}</div></div>
+            <div class="flex gap-2 mt-6">
+                <button class="modal-close-button flex-1 bg-gray-200 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">閉じる</button>
+                <button id="edit-from-detail-btn" data-id="${id}" class="flex-1 bg-sky-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-600">編集</button>
+            </div>`);
+        }
+        function showConfirmationModal(t, x, f) { showModal(`<h3 class="text-xl font-bold mb-2">${t}</h3><p class="text-gray-600 mb-6">${x}</p><div class="flex gap-4"><button class="modal-close-button flex-1 bg-gray-200 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">キャンセル</button><button id="modal-confirm-btn" class="flex-1 bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600">削除する</button></div>`); document.getElementById('modal-confirm-btn').onclick = f; };
+        function showDayTodosModal(d, ts) { const ds = `${d.getMonth() + 1}月${d.getDate()}日`; const l = ts.length > 0 ? `<ul class="space-y-2 text-left">${ts.map(t => `<li class="flex items-center gap-3 p-2 rounded-lg ${t.completed ? 'bg-gray-100' : ''}"><i class="fas ${t.completed ? 'fa-check-circle text-green-500' : 'fa-circle text-gray-300'}"></i><span class="${t.completed ? 'line-through text-gray-500' : ''}">${t.title}</span></li>`).join('')}</ul>` : `<p class="text-gray-500">この日のToDoはありません。</p>`; showModal(`<h3 class="text-xl font-bold mb-4">${ds}のToDo</h3><div class="max-h-60 overflow-y-auto pr-2">${l}</div><button class="modal-close-button mt-6 w-full bg-gray-200 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">閉じる</button>`); };
+
+        function switchToEditView(id) {
+            const todo = state.todos.find(t => t.id === id);
+            if (!todo) return;
+            closeModal();
+            navigateTo('create');
+            setTimeout(() => {
+                document.querySelector('#app-container h1').textContent = 'ToDoを編集';
+                document.querySelector('#create-form button[type="submit"]').textContent = '更新する';
+                document.getElementById('edit-todo-id').value = todo.id;
+                document.getElementById('title').value = todo.title;
+                document.getElementById('content').value = todo.content;
+                document.getElementById('deadline').value = todo.deadline;
+                document.getElementById('spreadsheet_url').value = todo.spreadsheet_url || '';
+                document.getElementById('impact').value = todo.impact || '';
+                document.getElementById('repeat').value = todo.repeat || 'none';
+                document.getElementById('importance').value = todo.importance || '1';
+                document.getElementById('urgency').value = todo.urgency || '1';
+                document.getElementById('isGuardian').checked = todo.isGuardian || false;
+            }, 0);
+        }
+
+        // --- ヘルパー関数 ---
+        function formatDate(d, w = false) { const o = { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }; if (w) o.year = 'numeric'; return new Intl.DateTimeFormat('ja-JP', o).format(d); };
+
+    </script>
 </body>
 </html>
